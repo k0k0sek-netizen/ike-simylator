@@ -1,0 +1,16 @@
+{
+  "name": "ike-simulator-zero",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Zero-Latency IKE Simulator Monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "build": "npm run build --workspaces",
+    "build:wasm": "npm run build -w engine",
+    "start": "npm start workspaces"
+  }
+}

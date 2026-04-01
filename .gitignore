@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.npm
+.eslintcache
+
+# Rust build artifacts
+target/
+**/*.wasm
+**/*.js
+**/*.d.ts
+!packages/engine/pkg/**/*
+
+# wasm-pack build output (excluding source/metadata if needed, but usually we ignore pkg for raw source control if it's reproducible)
+# Actually, it's better to keep the generated pkg in the repo if we are not using a CI to build it.
+# But standard is to ignore it. Let's ignore it for now.
+# packages/engine/pkg/
+
+# Production build artifacts
+dist/
+dist-ssr/
+build/
+
+# Local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Tooling and IDEs
+.vscode/
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.agent/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
