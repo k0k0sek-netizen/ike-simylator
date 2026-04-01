@@ -63,15 +63,22 @@ export default function App() {
           monthlyContribution: store.monthlyContribution, 
           currentAge: store.currentAge, 
           retirementAge: store.retirementAge, 
-          maximizeIkeLimit: store.maximizeIkeLimit,
           inflationRate: store.inflationRate, 
           annualStepUp: store.annualStepUp, 
           coreRate: store.coreRate, 
           satRate: store.satRate,
+          bondsRate: store.bondsRate,
+          isCoreIke: store.isCoreIke,
+          isSatIke: store.isSatIke,
+          isBondsIke: store.isBondsIke,
           monthlyWithdrawal: store.monthlyWithdrawal,
           withdrawalYears: store.withdrawalYears
         };
-        const results = wasmModule.current.generateMultipleScenarios(inputParams, store.customCorePct);
+        const results = wasmModule.current.generateMultipleScenarios(
+          inputParams, 
+          store.customCoreWeight,
+          store.customSatWeight
+        );
         
         setSimResults(results);
       } catch (err) {
@@ -79,8 +86,10 @@ export default function App() {
       }
     }
   }, [
-    engineType, store.monthlyContribution, store.currentAge, store.retirementAge, store.maximizeIkeLimit, store.inflationRate, 
-    store.annualStepUp, store.coreRate, store.satRate, store.customCorePct, store.monthlyWithdrawal, store.withdrawalYears
+    engineType, store.monthlyContribution, store.currentAge, store.retirementAge, store.inflationRate, 
+    store.annualStepUp, store.coreRate, store.satRate, store.bondsRate, 
+    store.isCoreIke, store.isSatIke, store.isBondsIke,
+    store.customCoreWeight, store.customSatWeight, store.monthlyWithdrawal, store.withdrawalYears
   ]);
 
   const activeScenario = simResults ? simResults[3] : null; 
@@ -116,12 +125,16 @@ export default function App() {
         monthly_contribution: store.monthlyContribution,
         current_age: store.currentAge,
         retirement_age: store.retirementAge,
-        maximize_ike_limit: store.maximizeIkeLimit,
         inflation_rate: store.inflationRate,
         annual_step_up: store.annualStepUp,
         core_rate: store.coreRate,
         sat_rate: store.satRate,
-        custom_core_pct: store.customCorePct
+        bonds_rate: store.bondsRate,
+        is_core_ike: store.isCoreIke,
+        is_sat_ike: store.isSatIke,
+        is_bonds_ike: store.isBondsIke,
+        custom_core_weight: store.customCoreWeight,
+        custom_sat_weight: store.customSatWeight
       });
       fetchDocs();
     } catch(e) {
@@ -154,16 +167,19 @@ export default function App() {
     }
   };
 
-  const handleLoadDoc = (p: SavedPortfolio) => {
+  const handleLoadDoc = (p: any) => {
     store.setMonthlyContribution(p.monthly_contribution);
     store.setCurrentAge(p.current_age);
     store.setRetirementAge(p.retirement_age);
-    store.setMaximizeIkeLimit(p.maximize_ike_limit || false);
     store.setInflationRate(p.inflation_rate);
     store.setAnnualStepUp(p.annual_step_up);
     store.setCoreRate(p.core_rate);
     store.setSatRate(p.sat_rate);
-    store.setCustomCorePct(p.custom_core_pct);
+    store.setBondsRate(p.bonds_rate || 1.5);
+    store.setIsCoreIke(p.is_core_ike !== undefined ? p.is_core_ike : true);
+    store.setIsSatIke(p.is_sat_ike !== undefined ? p.is_sat_ike : true);
+    store.setIsBondsIke(p.is_bonds_ike !== undefined ? p.is_bonds_ike : false);
+    store.setAllocation(p.custom_core_weight, p.custom_sat_weight);
     alert(`Wczytano: ${p.name}`);
   };
 

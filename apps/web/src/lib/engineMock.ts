@@ -1,22 +1,28 @@
-export function generateMultipleScenarios(params: any, customCorePct: number) {
+export function generateMultipleScenarios(params: any, customCoreWeight: number, customSatWeight: number) {
     const IKE_LIMIT_2026 = 26000.0;
+    const customBondsWeight = 100.0 - customCoreWeight - customSatWeight;
 
-    function calculateScenarioDataInternal(initialPmt: number, stepUpRate: number, nominalRate: number, realRate: number, years: number, inflationRate: number, maximizeIkeLimit: boolean, monthlyWithdrawalAmount: number, p: any, portionWeight: number) {
+    function calculateScenarioDataInternal(
+        initialPmt: number, 
+        nominalRate: number, 
+        realRate: number, 
+        years: number, 
+        p: any, 
+        isIke: boolean, 
+        monthlyWithdrawalAmount: number = 0
+    ) {
         let nominalBalance = 0.0;
         let realBalance = 0.0;
         let currentPmt = initialPmt;
-        
         let totalInvestedNominal = 0.0;
         let totalInvestedReal = 0.0;
         
-        // Zgodnie z poleceniem: konwersja do ułamka, a potem podzielenie stopy rocznej na 12 miesięcy
         const rateAnnualNominal = nominalRate / 100.0;
         const rateAnnualReal = realRate / 100.0;
-        
         const nominalMonthlyRate = rateAnnualNominal / 12.0;
         const realMonthlyRate = rateAnnualReal / 12.0;
 
-        const totalYears = years + p.withdrawalYears;
+        const totalYears = years + (p.withdrawalYears || 0);
         let bankruptAge: number | null = null;
         let yearlyData = [];
 
@@ -24,24 +30,11 @@ export function generateMultipleScenarios(params: any, customCorePct: number) {
             let isDecumulation = y > years;
             let yearlyInvestedNominal = 0.0;
             let yearlyNominalInterest = 0.0;
-            let monthlyPmtRecord = 0.0;
-            
-            if (!isDecumulation) {
-                let limitForPortion = (IKE_LIMIT_2026 / 12.0) * portionWeight;
-                if (maximizeIkeLimit) {
-                    currentPmt = limitForPortion;
-                } else if (currentPmt > limitForPortion) {
-                    currentPmt = limitForPortion;
-                }
-                monthlyPmtRecord = currentPmt;
-            } else {
-                monthlyPmtRecord = -monthlyWithdrawalAmount;
-            }
+            let monthlyPmtRecord = isDecumulation ? -monthlyWithdrawalAmount : currentPmt;
             
             for (let m = 1; m <= 12; m++) {
                 const totalMonths = (y - 1) * 12 + m;
-                const currentInflationFactor = Math.pow(1.0 + inflationRate / 100.0, totalMonths / 12.0);
-                
+                const currentInflationFactor = Math.pow(1.0 + p.inflationRate / 100.0, totalMonths / 12.0);
                 const monthlyNominalInterest = nominalBalance * nominalMonthlyRate;
                 const monthlyRealInterest = realBalance * realMonthlyRate;
                 yearlyNominalInterest += monthlyNominalInterest;
@@ -55,25 +48,22 @@ export function generateMultipleScenarios(params: any, customCorePct: number) {
                     if (nominalBalance < 0.0) {
                         nominalBalance = 0.0;
                         realBalance = 0.0;
-                        if (bankruptAge === null) {
-                            bankruptAge = p.currentAge + y;
-                        }
+                        if (bankruptAge === null) bankruptAge = p.currentAge + y;
                     }
                 } else {
                     const realPmt = currentPmt / currentInflationFactor;
                     nominalBalance += monthlyNominalInterest + currentPmt;
                     realBalance += monthlyRealInterest + realPmt;
-                    
                     totalInvestedNominal += currentPmt;
                     totalInvestedReal += realPmt;
-                    
                     yearlyInvestedNominal += currentPmt;
                 }
             }
             
             const totalProfitSoFar = nominalBalance - totalInvestedNominal;
-            const taxShield = totalProfitSoFar > 0.0 ? totalProfitSoFar * 0.19 : 0.0;
-            const netProfit = totalProfitSoFar - taxShield;
+            const baseTax = totalProfitSoFar > 0 ? totalProfitSoFar * 0.19 : 0;
+            const taxShield = isIke ? baseTax : 0;
+            const netProfit = isIke ? totalProfitSoFar : totalProfitSoFar - baseTax;
             
             yearlyData.push({
                 year: y,
@@ -89,239 +79,120 @@ export function generateMultipleScenarios(params: any, customCorePct: number) {
             });
 
             if (!isDecumulation) {
-                currentPmt *= 1.0 + stepUpRate / 100.0;
+                currentPmt *= 1.0 + p.annualStepUp / 100.0;
             }
         }
         
-        const baseInvested = initialPmt * 12.0 * years;
-        
         const totalProfit = nominalBalance - totalInvestedNominal;
-        const taxShield = totalProfit > 0.0 ? totalProfit * 0.19 : 0.0;
-        const netProfit = totalProfit - taxShield;
+        const baseTax = totalProfit > 0 ? totalProfit * 0.19 : 0;
+        const taxShield = isIke ? baseTax : 0;
+        const netProfit = isIke ? totalProfit : totalProfit - baseTax;
         
         return {
-            nominalBalance,
-            realBalance,
-            totalInvestedNominal,
-            totalInvestedReal,
-            baseInvested,
-            netProfit,
-            taxShield,
-            yearlyData,
-            bankruptAge,
+            nominalBalance, realBalance, totalInvestedNominal, totalInvestedReal,
+            baseInvested: initialPmt * 12 * years,
+            netProfit, taxShield, yearlyData, bankruptAge
         };
     }
 
-    function generateScenarioInternal(title: string, description: string, corePct: number, satPct: number, colorClassLight: string, colorClassDark: string, p: any) {
-        const initialCorePmt = p.monthlyContribution * (corePct / 100.0);
-        const initialSatPmt = p.monthlyContribution * (satPct / 100.0);
+    function generateScenarioInternal(title: string, description: string, cPct: number, sPct: number, bPct: number, light: string, dark: string, p: any) {
+        let initCPmt = p.monthlyContribution * (cPct / 100);
+        let initSPmt = p.monthlyContribution * (sPct / 100);
+        let initBPmt = p.monthlyContribution * (bPct / 100);
 
-        const nominalCoreRate = p.coreRate + p.inflationRate;
-        const nominalSatRate = p.satRate + p.inflationRate;
-        
-        let years = p.retirementAge - p.currentAge;
-        if (years < 1) years = 1;
+        // Limit IKE Capping
+        let ikeSum = 0;
+        if (p.isCoreIke) ikeSum += initCPmt;
+        if (p.isSatIke) ikeSum += initSPmt;
+        if (p.isBondsIke) ikeSum += initBPmt;
 
-        // === FAZA AKUMULACJI: osobne portfele ===
+        const monthlyLimit = IKE_LIMIT_2026 / 12;
+        if (ikeSum > monthlyLimit) {
+            const f = monthlyLimit / ikeSum;
+            if (p.isCoreIke) initCPmt *= f;
+            if (p.isSatIke) initSPmt *= f;
+            if (p.isBondsIke) initBPmt *= f;
+        }
+
+        const years = Math.max(1, p.retirementAge - p.currentAge);
         const accumParams = { ...p, withdrawalYears: 0 };
 
-        const coreData = calculateScenarioDataInternal(
-            initialCorePmt, p.annualStepUp, nominalCoreRate, p.coreRate, years, p.inflationRate, p.maximizeIkeLimit, 0.0, accumParams, corePct / 100.0
-        );
-        
-        const satData = calculateScenarioDataInternal(
-            initialSatPmt, p.annualStepUp, nominalSatRate, p.satRate, years, p.inflationRate, p.maximizeIkeLimit, 0.0, accumParams, satPct / 100.0
-        );
-        
-        const totalInvestedNominal = coreData.totalInvestedNominal + satData.totalInvestedNominal;
-        const totalInvestedReal = coreData.totalInvestedReal + satData.totalInvestedReal;
-        const totalBaseInvested = coreData.baseInvested + satData.baseInvested;
-        const totalStepUpInvested = totalInvestedNominal - totalBaseInvested;
+        const cData = calculateScenarioDataInternal(initCPmt, p.coreRate + p.inflationRate, p.coreRate, years, accumParams, p.isCoreIke);
+        const sData = calculateScenarioDataInternal(initSPmt, p.satRate + p.inflationRate, p.satRate, years, accumParams, p.isSatIke);
+        const bData = calculateScenarioDataInternal(initBPmt, p.bondsRate + p.inflationRate, p.bondsRate, years, accumParams, p.isBondsIke);
 
-        // Buduj yearlyData fazy akumulacji (sumowanie Core+Sat)
-        let yearlyData: any[] = [];
-        for (let idx = 0; idx < years; idx++) {
-            const cd = coreData.yearlyData[idx];
-            const sd = satData.yearlyData[idx];
+        const totalInvNom = cData.totalInvestedNominal + sData.totalInvestedNominal + bData.totalInvestedNominal;
+        const totalInvRl = cData.totalInvestedReal + sData.totalInvestedReal + bData.totalInvestedReal;
+        
+        let yearlyData = [];
+        for (let i = 0; i < years; i++) {
+            const cd = cData.yearlyData[i], sd = sData.yearlyData[i], bd = bData.yearlyData[i];
             yearlyData.push({
                 year: cd.year,
-                monthlyPmt: cd.monthlyPmt + sd.monthlyPmt,
-                yearlyInvestedNominal: cd.yearlyInvestedNominal + sd.yearlyInvestedNominal,
-                nominalInterest: cd.nominalInterest + sd.nominalInterest,
-                nominalBalance: cd.nominalBalance + sd.nominalBalance,
-                realBalance: cd.realBalance + sd.realBalance,
-                totalInvestedNominal: cd.totalInvestedNominal + sd.totalInvestedNominal,
-                totalInvestedReal: (cd.totalInvestedReal || 0) + (sd.totalInvestedReal || 0),
-                netProfit: cd.netProfit + sd.netProfit,
-                taxShield: cd.taxShield + sd.taxShield,
+                monthlyPmt: cd.monthlyPmt + sd.monthlyPmt + bd.monthlyPmt,
+                yearlyInvestedNominal: cd.yearlyInvestedNominal + sd.yearlyInvestedNominal + bd.yearlyInvestedNominal,
+                nominalInterest: cd.nominalInterest + sd.nominalInterest + bd.nominalInterest,
+                nominalBalance: cd.nominalBalance + sd.nominalBalance + bd.nominalBalance,
+                realBalance: cd.realBalance + sd.realBalance + bd.realBalance,
+                totalInvestedNominal: cd.totalInvestedNominal + sd.totalInvestedNominal + bd.totalInvestedNominal,
+                totalInvestedReal: cd.totalInvestedReal + sd.totalInvestedReal + bd.totalInvestedReal,
+                netProfit: cd.netProfit + sd.netProfit + bd.netProfit,
+                taxShield: cd.taxShield + sd.taxShield + bd.taxShield,
             });
         }
 
-        // === FAZA DEKUMULACJI: zunifikowana pętla z dynamicznym rebalancingiem ===
-        let coreNom = coreData.nominalBalance;
-        let satNom = satData.nominalBalance;
-        let coreReal = coreData.realBalance;
-        let satReal = satData.realBalance;
-
-        const coreNomMonthlyRate = nominalCoreRate / 100.0 / 12.0;
-        const satNomMonthlyRate = nominalSatRate / 100.0 / 12.0;
-        const coreRealMonthlyRate = p.coreRate / 100.0 / 12.0;
-        const satRealMonthlyRate = p.satRate / 100.0 / 12.0;
-
-        const monthlyWithdrawal = Math.abs(p.monthlyWithdrawal);
+        // Decumulation
+        let cN = cData.nominalBalance, sN = sData.nominalBalance, bN = bData.nominalBalance;
+        let cR = cData.realBalance, sR = sData.realBalance, bR = bData.realBalance;
         let bankruptAge: number | null = null;
 
         for (let y = 1; y <= p.withdrawalYears; y++) {
-            const actualYear = years + y;
-            let yearlyNominalInterest = 0.0;
-
+            const actY = years + y;
+            let yNomInt = 0, yTaxShield = 0;
             for (let m = 1; m <= 12; m++) {
-                if (bankruptAge !== null) break;
-
-                const totalMonths = (actualYear - 1) * 12 + m;
-                const inflationFactor = Math.pow(1.0 + p.inflationRate / 100.0, totalMonths / 12.0);
-
-                // 1. Nalicz odsetki osobno
-                const coreInterestNom = coreNom * coreNomMonthlyRate;
-                const satInterestNom = satNom * satNomMonthlyRate;
-                const coreInterestReal = coreReal * coreRealMonthlyRate;
-                const satInterestReal = satReal * satRealMonthlyRate;
-
-                coreNom += coreInterestNom;
-                satNom += satInterestNom;
-                coreReal += coreInterestReal;
-                satReal += satInterestReal;
-
-                yearlyNominalInterest += coreInterestNom + satInterestNom;
-
-                // 2. Wypłata zwaloryzowana o inflację
-                const withdrawalNominal = monthlyWithdrawal * inflationFactor;
-                const withdrawalReal = monthlyWithdrawal;
-
-                // 3. Sprawdź łączny dostępny kapitał
-                const totalCurrentNominal = coreNom + satNom;
-                const totalCurrentReal = coreReal + satReal;
-
-                if (totalCurrentNominal <= withdrawalNominal) {
-                    // BANKRUCTWO
-                    coreNom = 0.0;
-                    satNom = 0.0;
-                    coreReal = 0.0;
-                    satReal = 0.0;
-                    bankruptAge = p.currentAge + actualYear;
+                if (bankruptAge) break;
+                const infF = Math.pow(1 + p.inflationRate / 100, (actY * 12 + m) / 12);
+                const ci = cN * ((p.coreRate + p.inflationRate) / 100 / 12);
+                const si = sN * ((p.satRate + p.inflationRate) / 100 / 12);
+                const bi = bN * ((p.bondsRate + p.inflationRate) / 100 / 12);
+                const ct = p.isCoreIke ? 0 : ci * 0.19, st = p.isSatIke ? 0 : si * 0.19, bt = p.isBondsIke ? 0 : bi * 0.19;
+                yTaxShield += (p.isCoreIke ? ci * 0.19 : 0) + (p.isSatIke ? si * 0.19 : 0) + (p.isBondsIke ? bi * 0.19 : 0);
+                cN += ci - ct; sN += si - st; bN += bi - bt; yNomInt += ci + si + bi;
+                cR += cR * (p.coreRate / 100 / 12); sR += sR * (p.satRate / 100 / 12); bR += bR * (p.bondsRate / 100 / 12);
+                const wNom = Math.abs(p.monthlyWithdrawal) * infF;
+                const totN = cN + sN + bN;
+                if (totN <= wNom) {
+                    cN = 0; sN = 0; bN = 0; bankruptAge = p.currentAge + actY;
                 } else {
-                    // 4. Dynamiczny rebalancing
-                    const coreWeight = coreNom / totalCurrentNominal;
-                    const satWeight = satNom / totalCurrentNominal;
-
-                    coreNom -= withdrawalNominal * coreWeight;
-                    satNom -= withdrawalNominal * satWeight;
-
-                    if (totalCurrentReal > 0.0) {
-                        const realCoreW = coreReal / totalCurrentReal;
-                        const realSatW = satReal / totalCurrentReal;
-                        coreReal -= withdrawalReal * realCoreW;
-                        satReal -= withdrawalReal * realSatW;
-                    }
+                    const cw = cN / totN, sw = sN / totN, bw = bN / totN;
+                    cN -= wNom * cw; sN -= wNom * sw; bN -= wNom * bw;
                 }
             }
-
-            const combinedNominal = Math.max(0.0, coreNom + satNom);
-            const combinedReal = Math.max(0.0, coreReal + satReal);
-            const totalProfit = combinedNominal - totalInvestedNominal;
-            const taxShieldYr = totalProfit > 0.0 ? totalProfit * 0.19 : 0.0;
-            const netProfitYr = totalProfit - taxShieldYr;
-
+            const totN = cN + sN + bN;
             yearlyData.push({
-                year: actualYear,
-                monthlyPmt: -monthlyWithdrawal,
-                yearlyInvestedNominal: 0.0,
-                nominalInterest: yearlyNominalInterest,
-                nominalBalance: combinedNominal,
-                realBalance: combinedReal,
-                totalInvestedNominal,
-                totalInvestedReal,
-                netProfit: netProfitYr,
-                taxShield: taxShieldYr,
+                year: actY, monthlyPmt: -p.monthlyWithdrawal, yearlyInvestedNominal: 0, nominalInterest: yNomInt,
+                nominalBalance: totN, realBalance: cR + sR + bR, totalInvestedNominal: totalInvNom, totalInvestedReal: totalInvRl,
+                netProfit: totN - totalInvNom, taxShield: yTaxShield
             });
         }
 
-        // Końcowe wartości scenariusza
-        const finalNominal = Math.max(0.0, coreNom + satNom);
-        const finalReal = Math.max(0.0, coreReal + satReal);
-        
-        const nominalProfit = finalNominal - totalInvestedNominal;
-        const realProfit = finalReal - totalInvestedReal;
-        
-        const taxShield = nominalProfit > 0.0 ? nominalProfit * 0.19 : 0.0;
-        const netProfit = nominalProfit - taxShield;
-
+        const finalN = cN + sN + bN;
         return {
-            title,
-            description,
-            corePct,
-            satPct,
-            initialCorePmt,
-            initialSatPmt,
-            totalInvestedNominal,
-            totalInvestedReal,
-            totalBaseInvested,
-            totalStepUpInvested,
-            finalNominal,
-            finalReal,
-            nominalProfit,
-            realProfit,
-            netProfit,
-            taxShield,
-            yearlyData,
-            colorClassLight,
-            colorClassDark,
-            bankruptAge,
+            title, description, corePct: cPct, satPct: sPct, bondsPct: bPct,
+            initialCorePmt: initCPmt, initialSatPmt: initSPmt, initialBondsPmt: initBPmt,
+            totalInvestedNominal: totalInvNom, totalInvestedReal: totalInvRl, finalNominal: finalN,
+            finalReal: cR + sR + bR, nominalProfit: finalN - totalInvNom, netProfit: finalN - totalInvNom,
+            taxShield: (finalN - totalInvNom) > 0 ? (finalN - totalInvNom) * 0.19 : 0, 
+            yearlyData, colorClassLight: light, colorClassDark: dark, bankruptAge: bankruptAge || undefined
         };
     }
 
-    const scenarios = [
-        generateScenarioInternal(
-            "100% Nuda",
-            "Tylko globalny rdzeń (VWCE).",
-            100.0,
-            0.0,
-            "bg-slate-100 border-slate-300 text-slate-800",
-            "bg-slate-800 border-slate-700 text-slate-100",
-            params
-        ),
-        generateScenarioInternal(
-            "Złoty Środek",
-            "Balans strachu i chciwości.",
-            80.0,
-            20.0,
-            "bg-blue-50 border-blue-300 text-blue-900",
-            "bg-blue-900/30 border-blue-700 text-blue-100",
-            params
-        ),
-        generateScenarioInternal(
-            "Mocne Uderzenie",
-            "Agresywne krypto.",
-            70.0,
-            30.0,
-            "bg-amber-50 border-amber-300 text-amber-900",
-            "bg-amber-900/30 border-amber-700 text-amber-100",
-            params
-        ),
-        generateScenarioInternal(
-            "Twój Własny",
-            "Dostosuj suwakiem.",
-            customCorePct,
-            100.0 - customCorePct,
-            "bg-emerald-50 border-emerald-300 text-emerald-900",
-            "bg-emerald-900/30 border-emerald-700 text-emerald-100",
-            params
-        ),
+    return [
+        generateScenarioInternal("100% Świat", "Tylko VWCE.", 100, 0, 0, "bg-slate-100", "bg-slate-800", params),
+        generateScenarioInternal("Złoty Środek", "60/20/20.", 60, 20, 20, "bg-blue-50", "bg-blue-900/30", params),
+        generateScenarioInternal("Mocne Uderzenie", "60/40/0.", 60, 40, 0, "bg-amber-50", "bg-amber-900/30", params),
+        generateScenarioInternal("Twój Własny", "Dostosowany.", customCoreWeight, customSatWeight, customBondsWeight, "bg-emerald-50", "bg-emerald-900/30", params),
     ];
-    
-    return scenarios;
 }
 
-export default async function init() {
-    return Promise.resolve();
-}
+export default async function init() { return Promise.resolve(); }
