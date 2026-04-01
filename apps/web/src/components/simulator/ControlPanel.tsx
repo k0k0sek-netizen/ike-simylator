@@ -71,6 +71,64 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
     return null;
   };
 
+  const SaveButton = (
+    <div className="pt-8 border-t border-outline-variant/10">
+      <motion.button
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={handleSave}
+        disabled={saveStatus !== 'idle'}
+        className={`w-full py-4 rounded-xl font-headline font-black tracking-widest transition-all duration-300 flex items-center justify-center gap-3 shadow-lg ${
+          saveStatus === 'saved'
+            ? 'bg-secondary text-black shadow-secondary/20'
+            : 'bg-surface-container-high text-white hover:bg-primary hover:text-black border border-outline-variant/20 shadow-black/20'
+        }`}
+      >
+        <AnimatePresence mode="wait">
+          {saveStatus === 'idle' && (
+            <motion.div
+              key="idle"
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -5 }}
+              className="flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-sm">save</span>
+              ZAPISZ BIEŻĄCY SCENARIUSZ
+            </motion.div>
+          )}
+          {saveStatus === 'saving' && (
+            <motion.div
+              key="saving"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex items-center gap-2"
+            >
+              <div className="w-4 h-4 border-2 border-current border-t-transparent animate-spin rounded-full" />
+              ZAPISYWANIE...
+            </motion.div>
+          )}
+          {saveStatus === 'saved' && (
+            <motion.div
+              key="saved"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-sm">check_circle</span>
+              ZAPISANO ✓
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.button>
+      <p className="text-[9px] text-center text-outline/40 uppercase tracking-[0.2em] mt-3">
+        Projekt zostanie utrwalony w lokalnej bazie PGlite
+      </p>
+    </div>
+  );
+
   if (phase === 'accumulation') {
     return (
       <section className="space-y-8">
@@ -116,11 +174,9 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
 
             <div className="space-y-4 pt-4 border-t border-outline-variant/10">
               <div className="flex flex-col lg:flex-row gap-8 items-center lg:items-start">
-                {/* Suwaki Alokacji */}
                 <div className="flex-1 w-full space-y-6">
                   <p className="text-[10px] font-label text-outline uppercase tracking-wider mb-2">Twoja Alokacja (Suma 100%)</p>
                   
-                  {/* CORE Slider */}
                   <div className="space-y-2">
                     <div className="flex justify-between text-[10px] uppercase font-bold">
                       <span className="text-secondary flex items-center gap-1">
@@ -132,7 +188,6 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
                     <input className="w-full accent-secondary" type="range" min="0" max="100" step="5" value={store.customCoreWeight} onChange={(e) => store.setAllocation(Number(e.target.value), undefined, undefined)} />
                   </div>
 
-                  {/* SAT Slider */}
                   <div className="space-y-2">
                     <div className="flex justify-between text-[10px] uppercase font-bold">
                       <span className="text-amber-500 flex items-center gap-1">
@@ -144,7 +199,6 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
                     <input className="w-full accent-amber-500" type="range" min="0" max="100" step="5" value={store.customSatWeight} onChange={(e) => store.setAllocation(undefined, Number(e.target.value), undefined)} />
                   </div>
 
-                  {/* BONDS Slider */}
                   <div className="space-y-2">
                     <div className="flex justify-between text-[10px] uppercase font-bold">
                       <span className="text-indigo-400 flex items-center gap-1">
@@ -157,7 +211,6 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
                   </div>
                 </div>
 
-                {/* Donut Chart (Wizualizacja) */}
                 <div className="hidden sm:flex flex-col items-center gap-4 bg-surface-container-low/30 p-4 rounded-2xl border border-outline-variant/10 border-dashed">
                    <p className="text-[10px] font-label text-outline/60 uppercase tracking-widest">Wizualizacja Składu</p>
                    <AllocationDonut 
@@ -170,7 +223,6 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
               </div>
             </div>
 
-            {/* Stopy zwrotu */}
             <div className="grid grid-cols-2 gap-x-6 gap-y-4 pt-4 border-t border-outline-variant/10">
               <div className="flex flex-col gap-2">
                 <label className="text-[9px] font-label text-outline uppercase">Zysk Świat</label>
@@ -209,7 +261,6 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
               </div>
             </div>
 
-            {/* Sekcja IKE */}
             <div className="pt-6 border-t border-outline-variant/10">
               <label className="text-[10px] font-label text-outline uppercase tracking-wider block mb-4">Typ konta (Tarcza IKE)</label>
               <div className="space-y-3">
@@ -241,6 +292,7 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
             </div>
           </div>
         </div>
+        {SaveButton}
       </section>
     );
   }
@@ -275,7 +327,6 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
           </div>
         </motion.div>
 
-        {/* Podgląd kluczowych parametrów akumulacji (read-only w Kroku 2) */}
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/10">
           <p className="text-[10px] font-label text-outline uppercase tracking-wider mb-3">Parametry z Kroku 1 (przełącz by edytować)</p>
           <div className="grid grid-cols-2 gap-4">
@@ -300,63 +351,7 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
           </div>
         </div>
       </div>
-
-      {/* Global Save Button for Accumulation */}
-      <div className="pt-4 border-t border-outline-variant/10">
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleSave}
-          disabled={saveStatus !== 'idle'}
-          className={`w-full py-4 rounded-xl font-headline font-black tracking-widest transition-all duration-300 flex items-center justify-center gap-3 shadow-lg ${
-            saveStatus === 'saved'
-              ? 'bg-secondary text-black shadow-secondary/20'
-              : 'bg-surface-container-high text-white hover:bg-primary hover:text-black border border-outline-variant/20 shadow-black/20'
-          }`}
-        >
-          <AnimatePresence mode="wait">
-            {saveStatus === 'idle' && (
-              <motion.div
-                key="idle"
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -5 }}
-                className="flex items-center gap-2"
-              >
-                <span className="material-symbols-outlined text-sm">save</span>
-                ZAPISZ BIEŻĄCY SCENARIUSZ
-              </motion.div>
-            )}
-            {saveStatus === 'saving' && (
-              <motion.div
-                key="saving"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center gap-2"
-              >
-                <div className="w-4 h-4 border-2 border-current border-t-transparent animate-spin rounded-full" />
-                ZAPISYWANIE...
-              </motion.div>
-            )}
-            {saveStatus === 'saved' && (
-              <motion.div
-                key="saved"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                className="flex items-center gap-2"
-              >
-                <span className="material-symbols-outlined text-sm">check_circle</span>
-                ZAPISANO ✓
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.button>
-        <p className="text-[9px] text-center text-outline/40 uppercase tracking-[0.2em] mt-3">
-          Projekt zostanie utrwalony w lokalnej bazie PGlite
-        </p>
-      </div>
+      {SaveButton}
     </section>
   );
 }

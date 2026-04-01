@@ -11,16 +11,22 @@ export function Header() {
       </div>
       
       <div className="flex items-center gap-4">
+        {/* Theme Toggle (Hotfix) */}
+        <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-high border border-outline-variant/20 text-outline hover:text-primary transition-all duration-300">
+          <span className="material-symbols-outlined text-[20px]">light_mode</span>
+        </button>
+
         <button 
           onClick={() => store.setManagerOpen(true)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-black transition-all duration-300 group"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-black transition-all duration-300 group shadow-lg shadow-primary/5"
         >
-          <span className="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">folder_shared</span>
+          <span className="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">folder_shared</span>
           <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Moje Portfele</span>
         </button>
 
-        <div className="w-10 h-10 rounded-full border border-primary/20 bg-surface-container overflow-hidden active:scale-95 duration-200 transition-all hover:brightness-125">
-          <img alt="User Profile" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlhaPdVK85hixGrtPZK-siIStN_ciW4dY5t-5B1Or616rjgz_TJwQMMSYun_He6BVIYGv-ioVGes2lX24FlrtSjXb2oTQ33J_KzLqIL2OwtQRo0AT82ekjGQIXzNupgZPq1PedL0aKfKX4YaxU23NdFgtPXbdVy0HEMqenv7eorssti_4r4ZS7flcK8OJ5oDNknDgunBbAVTGMMeKPyVrBdJfeIxh934YfJHnzVJsaSKUqlgtPHxGBnCeNisXAII-3FXRySm56wpmi"/>
+        {/* User Profile Hook */}
+        <div className="w-10 h-10 rounded-xl border border-primary/20 bg-surface-container overflow-hidden active:scale-95 duration-200 transition-all hover:brightness-125 cursor-pointer shadow-md">
+          <img alt="User" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/a/ACg8ocL7J7G1lJ7N5L1G8Z7S8P8Q9R0T1U2V3W4X5Y6Z7=s96-c"/>
         </div>
       </div>
     </header>
