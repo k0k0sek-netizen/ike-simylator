@@ -10,13 +10,11 @@ import { ControlPanel } from './components/simulator/ControlPanel';
 import { YearlyDataTable } from './components/simulator/YearlyDataTable';
 import { TemplatesPanel } from './components/simulator/TemplatesPanel';
 import { PortfolioManager } from './components/simulator/PortfolioManager';
-import { EngineStatusBadge } from './components/ui/EngineStatusBadge';
 import { SocialShareCard } from './components/ui/SocialShareCard';
 import { AnimatedCounter } from './components/ui/AnimatedCounter';
 import { toPng } from 'html-to-image';
 
 export default function App() {
-  const [engineType, setEngineType] = useState<'WASM'|'JS_MOCK'|'LOADING'>('LOADING');
   const [simResults, setSimResults] = useState<any[] | null>(null);
 
   const wasmModule = useRef<any>(null);
@@ -28,7 +26,7 @@ export default function App() {
       .then((module) => {
         module.default().then(() => {
           wasmModule.current = module;
-          setEngineType('WASM');
+          store.setEngineType('WASM');
           console.log('%c[Kinetic Oracle] %c🟢 ZAINICJOWANO SILNIK RUST WASM (Zero-Latency)', 'font-weight: bold; color: #b721ff;', 'color: #4edea3; font-weight: bold;');
         });
       })
@@ -37,14 +35,14 @@ export default function App() {
         import('./lib/engineMock.ts')
           .then((module) => {
               wasmModule.current = module;
-              setEngineType('JS_MOCK');
+              store.setEngineType('JS_MOCK');
               console.log('%c[Kinetic Oracle] %c🟡 ZAINICJOWANO SILNIK AWARYJNY JS MOCK', 'font-weight: bold; color: #b721ff;', 'color: #ffc400; font-weight: bold;');
           });
       });
   }, []);
 
   useEffect(() => {
-    if (engineType !== 'LOADING' && wasmModule.current) {
+    if (store.engineType !== 'LOADING' && wasmModule.current) {
       try {
         const inputParams = { 
           monthlyContribution: store.monthlyContribution, 
@@ -73,7 +71,7 @@ export default function App() {
       }
     }
   }, [
-    engineType, store.monthlyContribution, store.currentAge, store.retirementAge, store.inflationRate, 
+    store.engineType, store.monthlyContribution, store.currentAge, store.retirementAge, store.inflationRate, 
     store.annualStepUp, store.coreRate, store.satRate, store.bondsRate, 
     store.isCoreIke, store.isSatIke, store.isBondsIke,
     store.customCoreWeight, store.customSatWeight, store.monthlyWithdrawal, store.withdrawalYears
@@ -128,9 +126,9 @@ export default function App() {
     }
   };
 
-  if (engineType === 'LOADING' && !simResults) {
+  if (store.engineType === 'LOADING' && !simResults) {
     return (
-      <div className="flex w-full h-screen items-center justify-center bg-surface">
+      <div className="flex w-full h-screen items-center justify-center bg-surface text-on-surface transition-colors duration-500">
         <motion.div 
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -151,9 +149,9 @@ export default function App() {
       initial={{ opacity: 0, y: 10 }} 
       animate={{ opacity: 1, y: 0 }} 
       transition={{ ease: "easeOut", duration: 0.5 }}
+      className="bg-background text-on-surface min-h-screen transition-colors duration-500"
     >
       <Header />
-      <EngineStatusBadge engineType={engineType} />
       
       <main className="pt-20 px-4 space-y-6 max-w-2xl mx-auto pb-28">
         <SocialShareCard ref={shareCardRef} scenario={activeScenario} />
@@ -182,7 +180,7 @@ export default function App() {
             className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-300 ${
               isAccumulation 
                 ? 'text-secondary font-bold' 
-                : 'text-outline hover:text-white/70'
+                : 'text-outline hover:text-on-surface/70'
             }`}
           >
             <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>trending_up</span>
@@ -194,7 +192,7 @@ export default function App() {
             className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-300 ${
               !isAccumulation 
                 ? 'text-error font-bold' 
-                : 'text-outline hover:text-white/70'
+                : 'text-outline hover:text-on-surface/70'
             }`}
           >
             <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>trending_down</span>
@@ -231,14 +229,14 @@ export default function App() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleShare} 
-          className="mt-4 w-full bg-[#1a1438] border border-[#b721ff]/50 text-[#e4b5ff] py-3 rounded-xl font-headline font-bold tracking-widest flex justify-center items-center gap-2 hover:bg-[#b721ff]/20 transition-colors shadow-[0_0_20px_rgba(183,33,255,0.1)]"
+          className="mt-4 w-full bg-surface-container-highest border border-primary/30 text-primary py-3 rounded-xl font-headline font-bold tracking-widest flex justify-center items-center gap-2 hover:bg-primary/20 transition-colors shadow-lg shadow-primary/5"
         >
           <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>share</span>
           UDOSTĘPNIJ WYNIK
         </motion.button>
         
         {/* === WYKRES (filtrowane dane) === */}
-        <InteractiveChart activeScenario={chartScenario} wasmReady={engineType !== 'LOADING'} />
+        <InteractiveChart activeScenario={chartScenario} wasmReady={store.engineType !== 'LOADING'} />
         
         {/* === TABELA INSPEKCYJNA (rok po roku) === */}
         <YearlyDataTable 

@@ -12,9 +12,9 @@ export function EngineStatusBadge({ engineType }: EngineStatusBadgeProps) {
   return (
     <motion.div 
       initial={{ opacity: 0, scale: 0.8 }}
-      animate={isWasm ? { opacity: 1, scale: 1, boxShadow: ["0 0 0px 0px rgba(74, 222, 128, 0.4)", "0 0 15px 5px rgba(74, 222, 128, 0.2)", "0 0 0px 0px rgba(74, 222, 128, 0.4)"] } : { opacity: 1, scale: 1 }}
+      animate={isWasm ? { opacity: 1, scale: 1, boxShadow: ["0 0 0px 0px rgba(74, 222, 128, 0.4)", "0 0 10px 3px rgba(74, 222, 128, 0.2)", "0 0 0px 0px rgba(74, 222, 128, 0.4)"] } : { opacity: 1, scale: 1 }}
       transition={{ boxShadow: { repeat: Infinity, duration: 2, ease: "easeInOut" } }}
-      className={`fixed top-4 right-4 z-60 flex items-center gap-2 px-3 py-1.5 rounded-full border backdrop-blur-md shadow-lg ${
+      className={`relative flex items-center gap-2 px-3 py-1 rounded-full border backdrop-blur-md transition-all duration-500 whitespace-nowrap ${
         isWasm 
           ? 'bg-green-500/10 border-green-500/30 text-green-400' 
           : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400'
