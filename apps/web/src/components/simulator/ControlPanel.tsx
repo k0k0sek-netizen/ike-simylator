@@ -1,6 +1,9 @@
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useSimulatorStore } from '../../store/useSimulatorStore';
 import { AnimatedCounter } from '../ui/AnimatedCounter';
+import { AllocationDonut } from '../ui/AllocationDonut';
+import { savePortfolio } from '../../db';
 
 const formatCurrency = (val: number) => {
   return new Intl.NumberFormat('pl-PL', {
@@ -12,10 +15,45 @@ const formatCurrency = (val: number) => {
 
 interface ControlPanelProps {
   phase: 'accumulation' | 'decumulation';
+  finalNominal: number;
 }
 
-export function ControlPanel({ phase }: ControlPanelProps) {
+export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
   const store = useSimulatorStore();
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  const handleSave = async () => {
+    const name = prompt("Podaj nazwę dla swojego portfela:", "Mój Portfel IKE");
+    if (!name) return;
+
+    setSaveStatus('saving');
+    try {
+      await savePortfolio(name, {
+        monthly_contribution: store.monthlyContribution,
+        current_age: store.currentAge,
+        retirement_age: store.retirementAge,
+        inflation_rate: store.inflationRate,
+        annual_step_up: store.annualStepUp,
+        core_rate: store.coreRate,
+        sat_rate: store.satRate,
+        bonds_rate: store.bondsRate,
+        is_core_ike: store.isCoreIke,
+        is_sat_ike: store.isSatIke,
+        is_bonds_ike: store.isBondsIke,
+        custom_core_weight: store.customCoreWeight,
+        custom_sat_weight: store.customSatWeight,
+        custom_bonds_weight: store.customBondsWeight,
+        final_nominal: finalNominal
+      });
+      
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (err) {
+      console.error(err);
+      alert("Błąd zapisu: " + err);
+      setSaveStatus('idle');
+    }
+  };
 
   const checkIkeWarning = () => {
     const counts = [store.isCoreIke, store.isSatIke, store.isBondsIke].filter(Boolean).length;
@@ -77,33 +115,58 @@ export function ControlPanel({ phase }: ControlPanelProps) {
             </div>
 
             <div className="space-y-4 pt-4 border-t border-outline-variant/10">
-              <p className="text-[10px] font-label text-outline uppercase tracking-wider">Alokacja Portfela (Suma 100%)</p>
-              
-              {/* CORE Slider */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-[10px] uppercase font-bold">
-                  <span className="text-secondary">Świat (Akcje)</span>
-                  <span className="text-secondary">{store.customCoreWeight}%</span>
-                </div>
-                <input className="w-full accent-secondary" type="range" min="0" max="100" step="5" value={store.customCoreWeight} onChange={(e) => store.setAllocation(Number(e.target.value), undefined, undefined)} />
-              </div>
+              <div className="flex flex-col lg:flex-row gap-8 items-center lg:items-start">
+                {/* Suwaki Alokacji */}
+                <div className="flex-1 w-full space-y-6">
+                  <p className="text-[10px] font-label text-outline uppercase tracking-wider mb-2">Twoja Alokacja (Suma 100%)</p>
+                  
+                  {/* CORE Slider */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[10px] uppercase font-bold">
+                      <span className="text-secondary flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-secondary"></div>
+                        Świat (Akcje)
+                      </span>
+                      <span className="text-secondary">{store.customCoreWeight}%</span>
+                    </div>
+                    <input className="w-full accent-secondary" type="range" min="0" max="100" step="5" value={store.customCoreWeight} onChange={(e) => store.setAllocation(Number(e.target.value), undefined, undefined)} />
+                  </div>
 
-              {/* SAT Slider */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-[10px] uppercase font-bold">
-                  <span className="text-amber-500">Krypto / Satelita</span>
-                  <span className="text-amber-500">{store.customSatWeight}%</span>
-                </div>
-                <input className="w-full accent-amber-500" type="range" min="0" max="100" step="5" value={store.customSatWeight} onChange={(e) => store.setAllocation(undefined, Number(e.target.value), undefined)} />
-              </div>
+                  {/* SAT Slider */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[10px] uppercase font-bold">
+                      <span className="text-amber-500 flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                        Krypto / Satelita
+                      </span>
+                      <span className="text-amber-500">{store.customSatWeight}%</span>
+                    </div>
+                    <input className="w-full accent-amber-500" type="range" min="0" max="100" step="5" value={store.customSatWeight} onChange={(e) => store.setAllocation(undefined, Number(e.target.value), undefined)} />
+                  </div>
 
-              {/* BONDS Slider */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-[10px] uppercase font-bold">
-                  <span className="text-indigo-400">Obligacje EDO</span>
-                  <span className="text-indigo-400">{store.customBondsWeight}%</span>
+                  {/* BONDS Slider */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[10px] uppercase font-bold">
+                      <span className="text-indigo-400 flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
+                        Obligacje EDO
+                      </span>
+                      <span className="text-indigo-400">{store.customBondsWeight}%</span>
+                    </div>
+                    <input className="w-full accent-indigo-400" type="range" min="0" max="100" step="5" value={store.customBondsWeight} onChange={(e) => store.setAllocation(undefined, undefined, Number(e.target.value))} />
+                  </div>
                 </div>
-                <input className="w-full accent-indigo-400" type="range" min="0" max="100" step="5" value={store.customBondsWeight} onChange={(e) => store.setAllocation(undefined, undefined, Number(e.target.value))} />
+
+                {/* Donut Chart (Wizualizacja) */}
+                <div className="hidden sm:flex flex-col items-center gap-4 bg-surface-container-low/30 p-4 rounded-2xl border border-outline-variant/10 border-dashed">
+                   <p className="text-[10px] font-label text-outline/60 uppercase tracking-widest">Wizualizacja Składu</p>
+                   <AllocationDonut 
+                      core={store.customCoreWeight}
+                      sat={store.customSatWeight}
+                      bonds={store.customBondsWeight}
+                      size={140}
+                   />
+                </div>
               </div>
             </div>
 
@@ -236,6 +299,63 @@ export function ControlPanel({ phase }: ControlPanelProps) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Global Save Button for Accumulation */}
+      <div className="pt-4 border-t border-outline-variant/10">
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={handleSave}
+          disabled={saveStatus !== 'idle'}
+          className={`w-full py-4 rounded-xl font-headline font-black tracking-widest transition-all duration-300 flex items-center justify-center gap-3 shadow-lg ${
+            saveStatus === 'saved'
+              ? 'bg-secondary text-black shadow-secondary/20'
+              : 'bg-surface-container-high text-white hover:bg-primary hover:text-black border border-outline-variant/20 shadow-black/20'
+          }`}
+        >
+          <AnimatePresence mode="wait">
+            {saveStatus === 'idle' && (
+              <motion.div
+                key="idle"
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                className="flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-sm">save</span>
+                ZAPISZ BIEŻĄCY SCENARIUSZ
+              </motion.div>
+            )}
+            {saveStatus === 'saving' && (
+              <motion.div
+                key="saving"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex items-center gap-2"
+              >
+                <div className="w-4 h-4 border-2 border-current border-t-transparent animate-spin rounded-full" />
+                ZAPISYWANIE...
+              </motion.div>
+            )}
+            {saveStatus === 'saved' && (
+              <motion.div
+                key="saved"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-sm">check_circle</span>
+                ZAPISANO ✓
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.button>
+        <p className="text-[9px] text-center text-outline/40 uppercase tracking-[0.2em] mt-3">
+          Projekt zostanie utrwalony w lokalnej bazie PGlite
+        </p>
       </div>
     </section>
   );

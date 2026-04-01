@@ -25,6 +25,7 @@ export function StatSummary({ activeScenario, phase }: StatSummaryProps) {
   // Wartość realna, zysk netto i tarcza podatkowa — z momentu emerytury
   const finalReal = retirementData ? retirementData.realBalance : (activeScenario ? activeScenario.finalReal : 0);
   const taxShield = retirementData ? retirementData.taxShield : (activeScenario ? activeScenario.taxShield : 0);
+  const taxPaid = retirementData ? (retirementData.taxPaid || 0) : (activeScenario ? activeScenario.taxPaid || 0 : 0);
   const netProfit = retirementData ? retirementData.netProfit : (activeScenario ? activeScenario.netProfit : 0);
   const bankruptAge = activeScenario ? activeScenario.bankruptAge : null;
 
@@ -87,6 +88,46 @@ export function StatSummary({ activeScenario, phase }: StatSummaryProps) {
                 prefix="+"
                 className="text-xl font-headline font-black text-[#b721ff] tracking-tighter" 
               />
+            </div>
+
+            {/* Paragon od Fiskusa — Zapłacony Podatek */}
+            <div className={`flex justify-between items-center p-4 rounded-xl border transition-all duration-300 ${taxPaid > 0 ? 'bg-error/10 border-error/30 hover:shadow-[0_0_20px_rgba(255,0,0,0.1)]' : 'bg-primary/10 border-primary/30 hover:shadow-[0_0_20px_rgba(0,255,0,0.1)]'}`}>
+              <div className="flex items-center gap-2">
+                <span className={`material-symbols-outlined ${taxPaid > 0 ? 'text-error' : 'text-primary'}`} style={{ fontVariationSettings: "'FILL' 1" }}>
+                  {taxPaid > 0 ? 'receipt_long' : 'verified'}
+                </span>
+                <p className={`text-xs font-label uppercase tracking-wider font-bold ${taxPaid > 0 ? 'text-error/80' : 'text-primary/80'}`}>
+                  {taxPaid > 0 ? 'Zapłacony podatek (Belka)' : 'Pełna Tarcza Podatkowa!'}
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-baseline gap-1">
+                  {taxPaid > 0 ? (
+                    <AnimatedCounter 
+                      value={taxPaid}
+                      prefix="- "
+                      className="text-xl font-headline font-black text-error tracking-tighter" 
+                    />
+                  ) : (
+                    <span className="text-lg font-headline font-black text-primary tracking-tight">0 zł 🔥</span>
+                  )}
+                </div>
+                
+                {/* Szczegółowe rozbicie podatku (tylko jeśli podatek > 0) */}
+                {taxPaid > 0 && (
+                  <div className="flex gap-2 text-[9px] font-label text-error/60 uppercase tracking-tighter">
+                    {activeScenario.taxPaidCore > 1 && (
+                      <span>Świat: {new Intl.NumberFormat('pl-PL').format(Math.round(activeScenario.taxPaidCore))} zł</span>
+                    )}
+                    {activeScenario.taxPaidSat > 1 && (
+                      <span>{activeScenario.taxPaidCore > 1 && "|"} Krypto: {new Intl.NumberFormat('pl-PL').format(Math.round(activeScenario.taxPaidSat))} zł</span>
+                    )}
+                    {activeScenario.taxPaidBonds > 1 && (
+                      <span>{(activeScenario.taxPaidCore > 1 || activeScenario.taxPaidSat > 1) && "|"} EDO: {new Intl.NumberFormat('pl-PL').format(Math.round(activeScenario.taxPaidBonds))} zł</span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* === WKŁAD WŁASNY — "Chłopski Rozum" === */}

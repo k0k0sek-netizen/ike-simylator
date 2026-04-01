@@ -5,7 +5,8 @@ let dbInstance: PGlite | null = null;
 export const getDb = async () => {
   if (dbInstance) return dbInstance;
   
-  dbInstance = new PGlite('idb://ike_simulator_03');
+  // Nowa wersja bazy dla Iteracji 27 (3-filarowa)
+  dbInstance = new PGlite('idb://ike_simulator_v27');
   
   await dbInstance.exec(`
     CREATE TABLE IF NOT EXISTS saved_portfolios (
@@ -18,12 +19,14 @@ export const getDb = async () => {
       annual_step_up REAL NOT NULL,
       core_rate REAL NOT NULL,
       sat_rate REAL NOT NULL,
-      bonds_rate REAL NOT NULL DEFAULT 1.5,
-      is_core_ike BOOLEAN NOT NULL DEFAULT TRUE,
-      is_sat_ike BOOLEAN NOT NULL DEFAULT TRUE,
-      is_bonds_ike BOOLEAN NOT NULL DEFAULT FALSE,
+      bonds_rate REAL NOT NULL,
+      is_core_ike BOOLEAN NOT NULL,
+      is_sat_ike BOOLEAN NOT NULL,
+      is_bonds_ike BOOLEAN NOT NULL,
       custom_core_weight REAL NOT NULL,
       custom_sat_weight REAL NOT NULL,
+      custom_bonds_weight REAL NOT NULL,
+      final_nominal REAL NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
@@ -47,13 +50,20 @@ export interface SavedPortfolio {
   is_bonds_ike: boolean;
   custom_core_weight: number;
   custom_sat_weight: number;
+  custom_bonds_weight: number;
+  final_nominal: number;
   created_at: string;
 }
 
 export const loadPortfolios = async (): Promise<SavedPortfolio[]> => {
-  const db = await getDb();
-  const res = await db.query('SELECT * FROM saved_portfolios ORDER BY id DESC');
-  return res.rows as SavedPortfolio[];
+  try {
+    const db = await getDb();
+    const res = await db.query('SELECT * FROM saved_portfolios ORDER BY created_at DESC');
+    return res.rows as SavedPortfolio[];
+  } catch (e) {
+    console.error('Błąd ładowania portfeli:', e);
+    return [];
+  }
 };
 
 export const savePortfolio = async (name: string, params: Omit<SavedPortfolio, 'id' | 'created_at' | 'name'>) => {
@@ -61,14 +71,20 @@ export const savePortfolio = async (name: string, params: Omit<SavedPortfolio, '
   await db.query(
     `INSERT INTO saved_portfolios (
       name, monthly_contribution, current_age, retirement_age, inflation_rate, annual_step_up, 
-      core_rate, sat_rate, bonds_rate, is_core_ike, is_sat_ike, is_bonds_ike, custom_core_weight, custom_sat_weight
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      core_rate, sat_rate, bonds_rate, is_core_ike, is_sat_ike, is_bonds_ike, 
+      custom_core_weight, custom_sat_weight, custom_bonds_weight, final_nominal
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
     [
       name, 
       params.monthly_contribution, params.current_age, params.retirement_age, 
       params.inflation_rate, params.annual_step_up, params.core_rate, params.sat_rate, 
       params.bonds_rate, params.is_core_ike, params.is_sat_ike, params.is_bonds_ike,
-      params.custom_core_weight, params.custom_sat_weight
+      params.custom_core_weight, params.custom_sat_weight, params.custom_bonds_weight, params.final_nominal
     ]
   );
+};
+
+export const deletePortfolio = async (id: number) => {
+  const db = await getDb();
+  await db.query('DELETE FROM saved_portfolios WHERE id = $1', [id]);
 };

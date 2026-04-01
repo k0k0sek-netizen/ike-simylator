@@ -76,6 +76,9 @@ export function generateMultipleScenarios(params: any, customCoreWeight: number,
                 totalInvestedReal,
                 netProfit,
                 taxShield,
+                taxPaidCore: isIke ? 0 : baseTax,
+                taxPaidSat: 0,
+                taxPaidBonds: 0,
             });
 
             if (!isDecumulation) {
@@ -91,7 +94,7 @@ export function generateMultipleScenarios(params: any, customCoreWeight: number,
         return {
             nominalBalance, realBalance, totalInvestedNominal, totalInvestedReal,
             baseInvested: initialPmt * 12 * years,
-            netProfit, taxShield, yearlyData, bankruptAge
+            netProfit, taxShield, taxPaidCore: isIke ? 0 : baseTax, taxPaidSat: 0, taxPaidBonds: 0, yearlyData, bankruptAge
         };
     }
 
@@ -138,6 +141,7 @@ export function generateMultipleScenarios(params: any, customCoreWeight: number,
                 totalInvestedReal: cd.totalInvestedReal + sd.totalInvestedReal + bd.totalInvestedReal,
                 netProfit: cd.netProfit + sd.netProfit + bd.netProfit,
                 taxShield: cd.taxShield + sd.taxShield + bd.taxShield,
+                taxPaid: cd.taxPaidCore + sd.taxPaidCore + bd.taxPaidCore, // Keep aggregate yearly for table
             });
         }
 
@@ -145,10 +149,11 @@ export function generateMultipleScenarios(params: any, customCoreWeight: number,
         let cN = cData.nominalBalance, sN = sData.nominalBalance, bN = bData.nominalBalance;
         let cR = cData.realBalance, sR = sData.realBalance, bR = bData.realBalance;
         let bankruptAge: number | null = null;
+        let totalTaxCore = cData.taxPaidCore, totalTaxSat = sData.taxPaidCore, totalTaxBonds = bData.taxPaidCore;
 
         for (let y = 1; y <= p.withdrawalYears; y++) {
             const actY = years + y;
-            let yNomInt = 0, yTaxShield = 0;
+            let yNomInt = 0, yTaxShield = 0, yTaxPaid = 0;
             for (let m = 1; m <= 12; m++) {
                 if (bankruptAge) break;
                 const infF = Math.pow(1 + p.inflationRate / 100, (actY * 12 + m) / 12);
@@ -157,6 +162,7 @@ export function generateMultipleScenarios(params: any, customCoreWeight: number,
                 const bi = bN * ((p.bondsRate + p.inflationRate) / 100 / 12);
                 const ct = p.isCoreIke ? 0 : ci * 0.19, st = p.isSatIke ? 0 : si * 0.19, bt = p.isBondsIke ? 0 : bi * 0.19;
                 yTaxShield += (p.isCoreIke ? ci * 0.19 : 0) + (p.isSatIke ? si * 0.19 : 0) + (p.isBondsIke ? bi * 0.19 : 0);
+                totalTaxCore += ct; totalTaxSat += st; totalTaxBonds += bt;
                 cN += ci - ct; sN += si - st; bN += bi - bt; yNomInt += ci + si + bi;
                 cR += cR * (p.coreRate / 100 / 12); sR += sR * (p.satRate / 100 / 12); bR += bR * (p.bondsRate / 100 / 12);
                 const wNom = Math.abs(p.monthlyWithdrawal) * infF;
@@ -172,7 +178,9 @@ export function generateMultipleScenarios(params: any, customCoreWeight: number,
             yearlyData.push({
                 year: actY, monthlyPmt: -p.monthlyWithdrawal, yearlyInvestedNominal: 0, nominalInterest: yNomInt,
                 nominalBalance: totN, realBalance: cR + sR + bR, totalInvestedNominal: totalInvNom, totalInvestedReal: totalInvRl,
-                netProfit: totN - totalInvNom, taxShield: yTaxShield
+                netProfit: totN - totalInvNom, 
+                taxShield: yTaxShield,
+                taxPaid: yTaxPaid
             });
         }
 
@@ -183,6 +191,9 @@ export function generateMultipleScenarios(params: any, customCoreWeight: number,
             totalInvestedNominal: totalInvNom, totalInvestedReal: totalInvRl, finalNominal: finalN,
             finalReal: cR + sR + bR, nominalProfit: finalN - totalInvNom, netProfit: finalN - totalInvNom,
             taxShield: (finalN - totalInvNom) > 0 ? (finalN - totalInvNom) * 0.19 : 0, 
+            taxPaidCore: totalTaxCore,
+            taxPaidSat: totalTaxSat,
+            taxPaidBonds: totalTaxBonds,
             yearlyData, colorClassLight: light, colorClassDark: dark, bankruptAge: bankruptAge || undefined
         };
     }

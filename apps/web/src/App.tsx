@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSimulatorStore } from './store/useSimulatorStore';
-import { loadPortfolios, savePortfolio, type SavedPortfolio } from './db';
 
 import { Header } from './components/layout/Header';
 import { BottomNav } from './components/layout/BottomNav';
@@ -9,8 +8,8 @@ import { StatSummary } from './components/simulator/StatSummary';
 import { InteractiveChart } from './components/simulator/InteractiveChart';
 import { ControlPanel } from './components/simulator/ControlPanel';
 import { YearlyDataTable } from './components/simulator/YearlyDataTable';
-import { SavedPortfolios } from './components/simulator/SavedPortfolios';
 import { TemplatesPanel } from './components/simulator/TemplatesPanel';
+import { PortfolioManager } from './components/simulator/PortfolioManager';
 import { EngineStatusBadge } from './components/ui/EngineStatusBadge';
 import { SocialShareCard } from './components/ui/SocialShareCard';
 import { AnimatedCounter } from './components/ui/AnimatedCounter';
@@ -19,24 +18,12 @@ import { toPng } from 'html-to-image';
 export default function App() {
   const [engineType, setEngineType] = useState<'WASM'|'JS_MOCK'|'LOADING'>('LOADING');
   const [simResults, setSimResults] = useState<any[] | null>(null);
-  const [savedDocs, setSavedDocs] = useState<SavedPortfolio[]>([]);
 
   const wasmModule = useRef<any>(null);
   const shareCardRef = useRef<HTMLDivElement>(null);
   const store = useSimulatorStore();
 
-  const fetchDocs = async () => {
-    try {
-      const data = await loadPortfolios();
-      setSavedDocs(data);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   useEffect(() => {
-    fetchDocs();
-    
     import('engine' as any)
       .then((module) => {
         module.default().then(() => {
@@ -117,32 +104,6 @@ export default function App() {
   const retirementData = activeScenario?.yearlyData?.find((d: any) => d.year === years);
   const capitalAtRetirement = retirementData ? retirementData.nominalBalance : 0;
 
-  const handleSaveDoc = async () => {
-    const name = prompt("Podaj nazwę dla scenariusza:", "Mój Portfel IKE");
-    if (!name) return;
-    try {
-      await savePortfolio(name, {
-        monthly_contribution: store.monthlyContribution,
-        current_age: store.currentAge,
-        retirement_age: store.retirementAge,
-        inflation_rate: store.inflationRate,
-        annual_step_up: store.annualStepUp,
-        core_rate: store.coreRate,
-        sat_rate: store.satRate,
-        bonds_rate: store.bondsRate,
-        is_core_ike: store.isCoreIke,
-        is_sat_ike: store.isSatIke,
-        is_bonds_ike: store.isBondsIke,
-        custom_core_weight: store.customCoreWeight,
-        custom_sat_weight: store.customSatWeight
-      });
-      fetchDocs();
-    } catch(e) {
-      console.error(e);
-      alert("Error saving: " + e);
-    }
-  };
-
   const handleShare = async () => {
     if (!shareCardRef.current) return;
     try {
@@ -165,22 +126,6 @@ export default function App() {
     } catch (err) {
       console.error('Share error:', err);
     }
-  };
-
-  const handleLoadDoc = (p: any) => {
-    store.setMonthlyContribution(p.monthly_contribution);
-    store.setCurrentAge(p.current_age);
-    store.setRetirementAge(p.retirement_age);
-    store.setInflationRate(p.inflation_rate);
-    store.setAnnualStepUp(p.annual_step_up);
-    store.setCoreRate(p.core_rate);
-    store.setSatRate(p.sat_rate);
-    store.setBondsRate(p.bonds_rate || 1.5);
-    store.setIsCoreIke(p.is_core_ike !== undefined ? p.is_core_ike : true);
-    store.setIsSatIke(p.is_sat_ike !== undefined ? p.is_sat_ike : true);
-    store.setIsBondsIke(p.is_bonds_ike !== undefined ? p.is_bonds_ike : false);
-    store.setAllocation(p.custom_core_weight, p.custom_sat_weight);
-    alert(`Wczytano: ${p.name}`);
   };
 
   if (engineType === 'LOADING' && !simResults) {
@@ -303,22 +248,18 @@ export default function App() {
         />
         
         {/* === PANEL KONTROLNY (kontekstowy) === */}
-        <ControlPanel phase={store.activePhase} />
-        
-        <motion.button 
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleSaveDoc} 
-          className="w-full bg-surface-container-low py-3 rounded-xl border border-secondary text-secondary font-headline font-bold tracking-widest hover:bg-secondary/10 hover:shadow-[0_0_15px_rgba(78,222,163,0.2)] transition-all"
-        >
-          ZAPISZ BIEŻĄCY SCENARIUSZ
-        </motion.button>
-
-        <SavedPortfolios savedDocs={savedDocs} onLoadDoc={handleLoadDoc} />
+        <ControlPanel 
+          phase={store.activePhase} 
+          finalNominal={capitalAtRetirement}
+        />
         
         <TemplatesPanel simResults={simResults} />
       </main>
 
+      <PortfolioManager 
+        isOpen={store.isManagerOpen} 
+        onClose={() => store.setManagerOpen(false)} 
+      />
       <BottomNav />
     </motion.div>
   );

@@ -14,6 +14,7 @@ pub struct YearlyData {
     pub total_invested_real: f64,
     pub net_profit: f64,
     pub tax_shield: f64,
+    pub tax_paid: f64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -26,6 +27,9 @@ pub struct CalculationResult {
     pub base_invested: f64,
     pub net_profit: f64,
     pub tax_shield: f64,
+    pub tax_paid_core: f64,
+    pub tax_paid_sat: f64,
+    pub tax_paid_bonds: f64,
     pub yearly_data: Vec<YearlyData>,
     pub bankrupt_age: Option<i32>,
 }
@@ -51,6 +55,9 @@ pub struct ScenarioResult {
     pub real_profit: f64,
     pub net_profit: f64,
     pub tax_shield: f64,
+    pub tax_paid_core: f64,
+    pub tax_paid_sat: f64,
+    pub tax_paid_bonds: f64,
     pub yearly_data: Vec<YearlyData>,
     pub color_class_light: String,
     pub color_class_dark: String,
@@ -166,6 +173,7 @@ fn calculate_scenario_data_internal(
             total_invested_real,
             net_profit,
             tax_shield,
+            tax_paid: if is_ike { 0.0 } else { base_tax },
         });
 
         if !is_decumulation {
@@ -187,6 +195,9 @@ fn calculate_scenario_data_internal(
         base_invested,
         net_profit,
         tax_shield,
+        tax_paid_core: if is_ike { 0.0 } else { base_tax },
+        tax_paid_sat: 0.0,
+        tax_paid_bonds: 0.0,
         yearly_data,
         bankrupt_age,
     }
@@ -264,6 +275,7 @@ fn generate_scenario_internal(
             total_invested_real: cd.total_invested_real + sd.total_invested_real + bd.total_invested_real,
             net_profit: cd.net_profit + sd.net_profit + bd.net_profit,
             tax_shield: cd.tax_shield + sd.tax_shield + bd.tax_shield,
+            tax_paid: cd.tax_paid + sd.tax_paid + bd.tax_paid,
         });
     }
 
@@ -284,12 +296,18 @@ fn generate_scenario_internal(
 
     let monthly_withdrawal = params.monthly_withdrawal.abs();
     let mut bankrupt_age: Option<i32> = None;
+    let mut total_tax_paid_core = core_data.tax_paid_core;
+    let mut total_tax_paid_sat = sat_data.tax_paid_core; // Sub-calc returns in _core field
+    let mut total_tax_paid_bonds = bonds_data.tax_paid_core;
 
     for y in 1..=params.withdrawal_years {
         let actual_year = years + y;
         let mut yearly_nominal_interest = 0.0;
         let mut yearly_tax_shield = 0.0;
         let mut yearly_net_profit = 0.0;
+        let mut yearly_tax_paid_core = 0.0;
+        let mut yearly_tax_paid_sat = 0.0;
+        let mut yearly_tax_paid_bonds = 0.0;
 
         for m in 1..=12 {
             if bankrupt_age.is_some() { break; }
@@ -310,6 +328,18 @@ fn generate_scenario_internal(
             yearly_tax_shield += (if params.is_core_ike { c_int_nom * 0.19 } else { 0.0 })
                                + (if params.is_sat_ike { s_int_nom * 0.19 } else { 0.0 })
                                + (if params.is_bonds_ike { b_int_nom * 0.19 } else { 0.0 });
+            
+            let c_t_paid = if !params.is_core_ike { c_int_nom * 0.19 } else { 0.0 };
+            let s_t_paid = if !params.is_sat_ike { s_int_nom * 0.19 } else { 0.0 };
+            let b_t_paid = if !params.is_bonds_ike { b_int_nom * 0.19 } else { 0.0 };
+
+            total_tax_paid_core += c_t_paid;
+            total_tax_paid_sat += s_t_paid;
+            total_tax_paid_bonds += b_t_paid;
+            
+            yearly_tax_paid_core += c_t_paid;
+            yearly_tax_paid_sat += s_t_paid;
+            yearly_tax_paid_bonds += b_t_paid;
 
             core_nom += c_int_nom - c_tax;
             sat_nom += s_int_nom - s_tax;
@@ -369,6 +399,7 @@ fn generate_scenario_internal(
             total_invested_real,
             net_profit: yearly_net_profit,
             tax_shield: yearly_tax_shield,
+            tax_paid: yearly_tax_paid_core + yearly_tax_paid_sat + yearly_tax_paid_bonds, // Main yearly value remains as sum
         });
     }
 
@@ -377,16 +408,20 @@ fn generate_scenario_internal(
     let nominal_profit = final_nominal - total_invested_nominal;
     let real_profit = final_real - total_invested_real;
     
-    // Final tax summary
-    let tax_shield = if nominal_profit > 0.0 { nominal_profit * 0.19 } else { 0.0 }; // Simplified aggregate for scenario result
+    // Summary total profit tax shield
+    let tax_shield = if nominal_profit > 0.0 { nominal_profit * 0.19 } else { 0.0 };
 
     ScenarioResult {
         title, description, core_pct, sat_pct, bonds_pct,
         initial_core_pmt, initial_sat_pmt, initial_bonds_pmt,
         total_invested_nominal, total_invested_real, total_base_invested, total_step_up_invested,
         final_nominal, final_real, nominal_profit, real_profit,
-        net_profit: nominal_profit, // Simplified
-        tax_shield, yearly_data, color_class_light, color_class_dark, bankrupt_age,
+        net_profit: nominal_profit,
+        tax_shield,
+        tax_paid_core: total_tax_paid_core,
+        tax_paid_sat: total_tax_paid_sat,
+        tax_paid_bonds: total_tax_paid_bonds,
+        yearly_data, color_class_light, color_class_dark, bankrupt_age,
     }
 }
 

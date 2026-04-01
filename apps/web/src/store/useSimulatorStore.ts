@@ -18,6 +18,8 @@ export interface SimulatorState {
   monthlyWithdrawal: number;
   withdrawalYears: number;
   activePhase: 'accumulation' | 'decumulation';
+  loadedScenarioId: number | null;
+  isManagerOpen: boolean;
   
   setMonthlyContribution: (val: number) => void;
   setCurrentAge: (val: number) => void;
@@ -34,6 +36,8 @@ export interface SimulatorState {
   setMonthlyWithdrawal: (val: number) => void;
   setWithdrawalYears: (val: number) => void;
   setActivePhase: (val: 'accumulation' | 'decumulation') => void;
+  setManagerOpen: (val: boolean) => void;
+  loadScenario: (data: any) => void;
 }
 
 export const useSimulatorStore = create<SimulatorState>((set) => ({
@@ -54,6 +58,8 @@ export const useSimulatorStore = create<SimulatorState>((set) => ({
   monthlyWithdrawal: 4000,
   withdrawalYears: 30,
   activePhase: 'accumulation',
+  loadedScenarioId: null,
+  isManagerOpen: false,
 
   setMonthlyContribution: (val) => set({ monthlyContribution: val }),
   setCurrentAge: (val) => set({ currentAge: val }),
@@ -123,4 +129,22 @@ export const useSimulatorStore = create<SimulatorState>((set) => ({
   setMonthlyWithdrawal: (val) => set({ monthlyWithdrawal: val }),
   setWithdrawalYears: (val) => set({ withdrawalYears: val }),
   setActivePhase: (val) => set({ activePhase: val }),
+  setManagerOpen: (val) => set({ isManagerOpen: val }),
+  loadScenario: (data) => set({
+    monthlyContribution: data.monthly_contribution,
+    currentAge: data.current_age,
+    retirementAge: data.retirement_age,
+    inflationRate: data.inflation_rate,
+    annualStepUp: data.annual_step_up,
+    coreRate: data.core_rate,
+    satRate: data.sat_rate,
+    bondsRate: data.bonds_rate,
+    customCoreWeight: data.custom_core_weight,
+    customSatWeight: data.custom_sat_weight,
+    customBondsWeight: data.custom_bonds_weight,
+    isCoreIke: data.is_core_ike,
+    isSatIke: data.is_sat_ike,
+    isBondsIke: data.is_bonds_ike,
+    loadedScenarioId: data.id,
+  }),
 }));
