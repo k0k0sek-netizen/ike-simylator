@@ -8,6 +8,7 @@ import { BottomNav } from './components/layout/BottomNav';
 import { StatSummary } from './components/simulator/StatSummary';
 import { InteractiveChart } from './components/simulator/InteractiveChart';
 import { ControlPanel } from './components/simulator/ControlPanel';
+import { YearlyDataTable } from './components/simulator/YearlyDataTable';
 import { SavedPortfolios } from './components/simulator/SavedPortfolios';
 import { TemplatesPanel } from './components/simulator/TemplatesPanel';
 import { EngineStatusBadge } from './components/ui/EngineStatusBadge';
@@ -277,6 +278,13 @@ export default function App() {
         
         {/* === WYKRES (filtrowane dane) === */}
         <InteractiveChart activeScenario={chartScenario} wasmReady={engineType !== 'LOADING'} />
+        
+        {/* === TABELA INSPEKCYJNA (rok po roku) === */}
+        <YearlyDataTable 
+          yearlyData={chartScenario?.yearlyData || []} 
+          startAge={store.activePhase === 'accumulation' ? store.currentAge : store.retirementAge} 
+          phase={store.activePhase} 
+        />
         
         {/* === PANEL KONTROLNY (kontekstowy) === */}
         <ControlPanel phase={store.activePhase} />
