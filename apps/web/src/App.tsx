@@ -12,13 +12,17 @@ import { TemplatesPanel } from './components/simulator/TemplatesPanel';
 import { PortfolioManager } from './components/simulator/PortfolioManager';
 import { SocialShareCard } from './components/ui/SocialShareCard';
 import { AnimatedCounter } from './components/ui/AnimatedCounter';
-import { toPng } from 'html-to-image';
+import { ExportMenu } from './components/simulator/ExportMenu';
+import { PrintableReport } from './components/simulator/PrintableReport';
+import { useReactToPrint } from 'react-to-print';
+import html2canvas from 'html2canvas';
 
 export default function App() {
   const [simResults, setSimResults] = useState<any[] | null>(null);
 
   const wasmModule = useRef<any>(null);
   const shareCardRef = useRef<HTMLDivElement>(null);
+  const reportRef = useRef<HTMLDivElement>(null);
   const store = useSimulatorStore();
 
   useEffect(() => {
@@ -102,27 +106,27 @@ export default function App() {
   const retirementData = activeScenario?.yearlyData?.find((d: any) => d.year === years);
   const capitalAtRetirement = retirementData ? retirementData.nominalBalance : 0;
 
-  const handleShare = async () => {
-    if (!shareCardRef.current) return;
-    try {
-      const dataUrl = await toPng(shareCardRef.current, { cacheBust: true, pixelRatio: 1 });
-      const blob = await (await fetch(dataUrl)).blob();
-      const file = new File([blob], 'kinetic-oracle.png', { type: 'image/png' });
+  const handlePrint = useReactToPrint({
+    contentRef: reportRef,
+  });
 
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          title: 'Kinetic Oracle: Moja Symulacja',
-          text: 'Sprawdź mój plan IKE w Kinetic Oracle!',
-          files: [file]
+  const handleExportPNG = async () => {
+    if (shareCardRef.current) {
+      try {
+        const canvas = await html2canvas(shareCardRef.current, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#0c0a1a',
+          logging: false,
         });
-      } else {
+        const imgData = canvas.toDataURL('image/png');
         const link = document.createElement('a');
-        link.download = 'kinetic-oracle.png';
-        link.href = dataUrl;
+        link.download = 'KineticOracle-Wrapped.png';
+        link.href = imgData;
         link.click();
+      } catch (err) {
+        console.error('Błąd podczas generowania grafiki:', err);
       }
-    } catch (err) {
-      console.error('Share error:', err);
     }
   };
 
@@ -154,10 +158,9 @@ export default function App() {
       <Header />
       
       <main className="pt-20 px-4 space-y-6 max-w-2xl mx-auto pb-28">
-        <SocialShareCard ref={shareCardRef} scenario={activeScenario} />
         
         {/* === PRZEŁĄCZNIK ZAKŁADEK === */}
-        <div className="relative flex bg-surface-container-lowest rounded-2xl p-1.5 border border-outline-variant/20 shadow-lg">
+        <div className="relative flex bg-white dark:bg-gray-800/50 rounded-2xl p-1.5 border border-outline-variant/20 shadow-lg">
           {/* Animated pill background */}
           <motion.div
             className="absolute top-1.5 bottom-1.5 rounded-xl z-0"
@@ -177,10 +180,9 @@ export default function App() {
           
           <button 
             onClick={() => store.setActivePhase('accumulation')}
+            style={{ color: isAccumulation ? (store.isDarkMode ? '#ffffff' : '#0f172a') : (store.isDarkMode ? 'rgba(255,255,255,0.4)' : '#64748b') }}
             className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-300 ${
-              isAccumulation 
-                ? 'text-secondary font-bold' 
-                : 'text-outline hover:text-on-surface/70'
+              isAccumulation ? 'font-bold' : ''
             }`}
           >
             <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>trending_up</span>
@@ -189,10 +191,9 @@ export default function App() {
           
           <button 
             onClick={() => store.setActivePhase('decumulation')}
+            style={{ color: !isAccumulation ? (store.isDarkMode ? '#ffffff' : '#0f172a') : (store.isDarkMode ? 'rgba(255,255,255,0.4)' : '#64748b') }}
             className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-300 ${
-              !isAccumulation 
-                ? 'text-error font-bold' 
-                : 'text-outline hover:text-on-surface/70'
+              !isAccumulation ? 'font-bold' : ''
             }`}
           >
             <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>trending_down</span>
@@ -211,11 +212,17 @@ export default function App() {
               transition={{ duration: 0.3 }}
               className="overflow-hidden"
             >
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-surface-container-low border border-secondary/20">
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-white dark:bg-gray-800/10 border border-secondary/20 shadow-sm dark:shadow-none">
                 <span className="material-symbols-outlined text-2xl text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>savings</span>
                 <div>
-                  <p className="text-[10px] font-label text-outline uppercase tracking-wider">Startujesz z kapitałem na emeryturze</p>
-                  <AnimatedCounter value={capitalAtRetirement} className="text-xl font-headline font-bold text-secondary" />
+                  <p className="text-[10px] font-label uppercase tracking-wider" style={{ color: store.isDarkMode ? 'rgba(255,255,255,0.6)' : '#475569' }}>
+                    Startujesz z kapitałem na emeryturze
+                  </p>
+                  <AnimatedCounter 
+                    value={capitalAtRetirement} 
+                    style={{ color: store.isDarkMode ? '#ffffff' : '#0f172a' }}
+                    className="text-xl font-headline font-bold" 
+                  />
                 </div>
               </div>
             </motion.div>
@@ -225,15 +232,12 @@ export default function App() {
         {/* === STAT SUMMARY (kontekstowy) === */}
         <StatSummary activeScenario={activeScenario} phase={store.activePhase} />
         
-        <motion.button 
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleShare} 
-          className="mt-4 w-full bg-surface-container-highest border border-primary/30 text-primary py-3 rounded-xl font-headline font-bold tracking-widest flex justify-center items-center gap-2 hover:bg-primary/20 transition-colors shadow-lg shadow-primary/5"
-        >
-          <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>share</span>
-          UDOSTĘPNIJ WYNIK
-        </motion.button>
+        {/* === EXPORT MENU (PDF/PNG) === */}
+        <ExportMenu 
+          onPrint={handlePrint}
+          onExportPNG={handleExportPNG}
+          isDarkMode={store.isDarkMode}
+        />
         
         {/* === WYKRES (filtrowane dane) === */}
         <InteractiveChart activeScenario={chartScenario} wasmReady={store.engineType !== 'LOADING'} />
@@ -252,6 +256,20 @@ export default function App() {
         />
         
         <TemplatesPanel simResults={simResults} />
+
+        {/* === HIDDEN EXPORT ASSETS === */}
+        <div style={{ position: 'absolute', left: '-9999px', pointerEvents: 'none' }}>
+           <PrintableReport 
+             key={`pdf-${store.monthlyContribution}-${store.currentAge}-${store.retirementAge}-${store.activePhase}`}
+             ref={reportRef} 
+             scenario={activeScenario} 
+           />
+           <SocialShareCard 
+             key={`png-${store.monthlyContribution}-${store.currentAge}-${store.retirementAge}-${store.activePhase}`}
+             ref={shareCardRef} 
+             scenario={activeScenario} 
+           />
+        </div>
       </main>
 
       <PortfolioManager 

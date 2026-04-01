@@ -8,6 +8,7 @@ interface TemplatesPanelProps {
 
 export function TemplatesPanel({}: TemplatesPanelProps) {
   const store = useSimulatorStore();
+  const isDarkMode = store.isDarkMode;
 
   const applyTemplate = (
     core: number, sat: number, bonds: number,
@@ -69,8 +70,10 @@ export function TemplatesPanel({}: TemplatesPanelProps) {
   return (
     <section className="space-y-6 pt-8 border-t border-outline-variant/10">
       <div className="flex items-center gap-3">
-        <span className="material-symbols-outlined text-outline/50">layers</span>
-        <h3 className="text-sm font-label uppercase tracking-widest text-outline">Gotowe Strategie Inwestycyjne</h3>
+        <span className="material-symbols-outlined text-slate-400 dark:text-slate-500">layers</span>
+        <h3 className="text-sm font-label uppercase tracking-widest" style={{ color: isDarkMode ? 'rgba(255,255,255,0.6)' : '#475569' }}>
+          Gotowe Strategie Inwestycyjne
+        </h3>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -84,18 +87,22 @@ export function TemplatesPanel({}: TemplatesPanelProps) {
               tpl.config[3] as number, tpl.config[4] as number, tpl.config[5] as number,
               tpl.config[6] as boolean, tpl.config[7] as boolean, tpl.config[8] as boolean
             )}
-            className="glass-card rounded-2xl p-5 border border-outline-variant/10 relative overflow-hidden group cursor-pointer hover:border-primary/40 transition-colors bg-surface-container-lowest h-full flex flex-col"
+            style={{ 
+              backgroundColor: isDarkMode ? 'rgba(30,41,59,0.5)' : '#ffffff',
+              borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(15,23,42,0.1)'
+            }}
+            className="glass-card rounded-2xl p-5 border relative overflow-hidden group cursor-pointer hover:border-primary/40 transition-colors h-full flex flex-col shadow-sm dark:shadow-none"
           >
             <div className={`absolute top-0 right-0 w-24 h-24 opacity-5 blur-3xl rounded-full -mr-12 -mt-12 transition-transform duration-500 group-hover:scale-150 bg-${tpl.color}`}></div>
             
             <div className="flex justify-between items-start mb-4">
-              <div className={`p-2 rounded-lg bg-surface-container-low border border-outline-variant/10 text-${tpl.color}`}>
+              <div className={`p-2 rounded-lg bg-slate-50 dark:bg-gray-700/50 border border-outline-variant/10 text-${tpl.color}`}>
                 <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>{tpl.icon}</span>
               </div>
             </div>
 
-            <h4 className="text-sm font-headline font-bold text-white group-hover:text-primary transition-colors">{tpl.name}</h4>
-            <p className="text-[10px] text-outline leading-relaxed mt-2 grow">{tpl.desc}</p>
+            <h4 className="text-sm font-headline font-bold transition-colors" style={{ color: isDarkMode ? '#ffffff' : '#0f172a' }}>{tpl.name}</h4>
+            <p className="text-[10px] leading-relaxed mt-2 grow" style={{ color: isDarkMode ? 'rgba(255,255,255,0.6)' : '#475569' }}>{tpl.desc}</p>
             
             <div className="mt-4 pt-4 border-t border-outline-variant/5 flex justify-between items-center">
               <div className="flex gap-1.5">
@@ -103,7 +110,7 @@ export function TemplatesPanel({}: TemplatesPanelProps) {
                 <div className="w-1.5 h-1.5 rounded-full bg-amber-500" title="Krypto"></div>
                 <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" title="EDO"></div>
               </div>
-              <span className="text-[9px] font-label text-outline/60 uppercase tracking-widest group-hover:text-primary transition-colors">Aplikuj Plan →</span>
+              <span className="text-[9px] font-label text-slate-400 dark:text-slate-500 uppercase tracking-widest group-hover:text-primary transition-colors">Aplikuj Plan →</span>
             </div>
           </motion.div>
         ))}

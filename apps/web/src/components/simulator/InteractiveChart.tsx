@@ -108,17 +108,17 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
       <div ref={chartContainerRef} className="absolute inset-0 w-full h-full p-4 drop-shadow-[0_0_15px_rgba(78,222,163,0.3)]" style={{ zIndex: 1 }} />
       
       <div className="absolute bottom-4 left-4 flex gap-4" style={{ zIndex: 2 }}>
-        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/20 px-2 py-1 rounded-full">
+        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-black/20 px-2 py-1 rounded-full border border-slate-200 dark:border-transparent">
           <span className="w-2 h-2 rounded-full bg-[#b721ff] shadow-[0_0_5px_#b721ff]"></span>
-          <span className="text-[10px] font-label text-[#e4b5ff] tracking-widest uppercase font-bold">Tarcza IKE</span>
+          <span className="text-[10px] font-label text-slate-900 dark:text-white tracking-widest uppercase font-bold">Tarcza IKE</span>
         </div>
-        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/20 px-2 py-1 rounded-full">
+        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-black/20 px-2 py-1 rounded-full border border-slate-200 dark:border-transparent">
           <span className="w-2 h-2 rounded-full bg-secondary shadow-[0_0_5px_#4edea3]"></span>
-          <span className="text-[10px] font-label text-secondary tracking-widest uppercase">Zysk Netto</span>
+          <span className="text-[10px] font-label text-slate-900 dark:text-white tracking-widest uppercase font-bold">Zysk Netto</span>
         </div>
-        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/20 px-2 py-1 rounded-full">
+        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-black/20 px-2 py-1 rounded-full border border-slate-200 dark:border-transparent">
           <span className="w-2 h-2 rounded-full bg-slate-500 shadow-[0_0_5px_#64748b]"></span>
-          <span className="text-[10px] font-label text-slate-400 tracking-widest uppercase">Wpłacony Kapitał</span>
+          <span className="text-[10px] font-label text-slate-900 dark:text-white tracking-widest uppercase font-bold">Wpłacony Kapitał</span>
         </div>
       </div>
     </section>

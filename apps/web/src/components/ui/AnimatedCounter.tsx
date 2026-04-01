@@ -7,6 +7,7 @@ interface AnimatedCounterProps {
   prefix?: string;
   suffix?: string;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 export function AnimatedCounter({
@@ -15,6 +16,7 @@ export function AnimatedCounter({
   prefix = '',
   suffix = '',
   className = '',
+  style = {},
 }: AnimatedCounterProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const motionValue = useMotionValue(0);
@@ -48,5 +50,5 @@ export function AnimatedCounter({
     });
   }, [springValue, isCurrency, prefix, suffix]);
 
-  return <span ref={ref} className={className} />;
+  return <span ref={ref} className={className} style={style} />;
 }

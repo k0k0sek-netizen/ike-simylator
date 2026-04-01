@@ -16,16 +16,16 @@ export function EngineStatusBadge({ engineType }: EngineStatusBadgeProps) {
       transition={{ boxShadow: { repeat: Infinity, duration: 2, ease: "easeInOut" } }}
       className={`relative flex items-center gap-2 px-3 py-1 rounded-full border backdrop-blur-md transition-all duration-500 whitespace-nowrap ${
         isWasm 
-          ? 'bg-green-500/10 border-green-500/30 text-green-400' 
-          : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400'
+          ? 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400' 
+          : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-400'
       }`}
     >
       <span className="relative flex h-2 w-2">
         <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-          isWasm ? 'bg-green-400' : 'bg-yellow-400'
+          isWasm ? 'bg-green-600 dark:bg-green-400' : 'bg-yellow-600 dark:bg-yellow-400'
         }`}></span>
         <span className={`relative inline-flex rounded-full h-2 w-2 ${
-          isWasm ? 'bg-green-500' : 'bg-yellow-500'
+          isWasm ? 'bg-green-600 dark:bg-green-500' : 'bg-yellow-600 dark:bg-yellow-500'
         }`}></span>
       </span>
       <span className="text-[10px] font-headline font-bold uppercase tracking-widest">
