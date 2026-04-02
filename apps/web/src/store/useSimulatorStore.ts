@@ -1,6 +1,18 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export interface MonteCarloPoint {
+  year: number;
+  p10: number;
+  p50: number;
+  p90: number;
+}
+
+export interface MonteCarloSummary {
+  points: MonteCarloPoint[];
+  successRate: number;
+}
+
 export interface SimulatorState {
   monthlyContribution: number;
   currentAge: number;
@@ -22,8 +34,15 @@ export interface SimulatorState {
   loadedScenarioId: number | null;
   isManagerOpen: boolean;
   isDarkMode: boolean;
-  engineType: 'WASM' | 'JS_MOCK' | 'LOADING'; // New!
+  engineType: 'WASM' | 'JS_MOCK' | 'LOADING';
   
+  // --- Monte Carlo Data ---
+  coreVolatility: number;
+  satVolatility: number;
+  bondsVolatility: number;
+  rebalancingStrategy: number; // 0: None, 1: Annual
+  mcResult: MonteCarloSummary | null;
+
   setMonthlyContribution: (val: number) => void;
   setCurrentAge: (val: number) => void;
   setRetirementAge: (val: number) => void;
@@ -42,12 +61,15 @@ export interface SimulatorState {
   setManagerOpen: (val: boolean) => void;
   loadScenario: (data: any) => void;
   toggleDarkMode: () => void;
-  setEngineType: (type: 'WASM' | 'JS_MOCK' | 'LOADING') => void; // New!
+  setEngineType: (type: 'WASM' | 'JS_MOCK' | 'LOADING') => void;
+  setVolatility: (core: number, sat: number, bonds: number) => void;
+  setRebalancingStrategy: (val: number) => void;
+  calculateMonteCarlo: () => Promise<void>;
 }
 
 export const useSimulatorStore = create<SimulatorState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       monthlyContribution: 500,
       currentAge: 30,
       retirementAge: 60,
@@ -69,6 +91,12 @@ export const useSimulatorStore = create<SimulatorState>()(
       isManagerOpen: false,
       isDarkMode: true,
       engineType: 'LOADING',
+      
+      coreVolatility: 15,
+      satVolatility: 60,
+      bondsVolatility: 3,
+      rebalancingStrategy: 1,
+      mcResult: null,
 
       setMonthlyContribution: (val) => set({ monthlyContribution: val }),
       setCurrentAge: (val) => set({ currentAge: val }),
@@ -115,30 +143,75 @@ export const useSimulatorStore = create<SimulatorState>()(
       setActivePhase: (val) => set({ activePhase: val }),
       setManagerOpen: (val) => set({ isManagerOpen: val }),
       loadScenario: (data) => set({
-        monthlyContribution: data.monthly_contribution,
-        currentAge: data.current_age,
-        retirementAge: data.retirement_age,
-        inflationRate: data.inflation_rate,
-        annualStepUp: data.annual_step_up,
-        coreRate: data.core_rate,
-        satRate: data.sat_rate,
-        bondsRate: data.bonds_rate,
-        customCoreWeight: data.custom_core_weight,
-        customSatWeight: data.custom_sat_weight,
-        customBondsWeight: data.custom_bonds_weight,
-        isCoreIke: data.is_core_ike,
-        isSatIke: data.is_sat_ike,
-        isBondsIke: data.is_bonds_ike,
+        monthlyContribution: data.monthlyContribution || data.monthly_contribution,
+        currentAge: data.currentAge || data.current_age,
+        retirementAge: data.retirementAge || data.retirement_age,
+        inflationRate: data.inflationRate || data.inflation_rate,
+        annualStepUp: data.annualStepUp || data.annual_step_up,
+        coreRate: data.coreRate || data.core_rate,
+        satRate: data.satRate || data.sat_rate,
+        bondsRate: data.bondsRate || data.bonds_rate,
+        customCoreWeight: data.customCoreWeight || data.custom_core_weight,
+        customSatWeight: data.customSatWeight || data.custom_sat_weight,
+        customBondsWeight: data.customBondsWeight || data.custom_bonds_weight,
+        isCoreIke: data.isCoreIke || data.is_core_ike,
+        isSatIke: data.isSatIke || data.is_sat_ike,
+        isBondsIke: data.isBondsIke || data.is_bonds_ike,
         loadedScenarioId: data.id,
       }),
       toggleDarkMode: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
       setEngineType: (type) => set({ engineType: type }),
+      
+      setVolatility: (core, sat, bonds) => set({ 
+        coreVolatility: core, 
+        satVolatility: sat, 
+        bondsVolatility: bonds 
+      }),
+      
+      setRebalancingStrategy: (val) => set({ rebalancingStrategy: val }),
+
+      calculateMonteCarlo: async () => {
+        const state = get();
+        if (state.engineType !== 'WASM') return;
+
+        try {
+          const engine = await import('engine');
+          // @ts-ignore - generateMonteCarloData dynamically added in Iteration 30
+          if (!engine.generateMonteCarloData) return;
+          
+          const params = {
+            monthlyContribution: state.monthlyContribution,
+            currentAge: state.currentAge,
+            retirementAge: state.retirementAge,
+            inflationRate: state.inflationRate,
+            annualStepUp: state.annualStepUp,
+            coreRate: state.coreRate,
+            satRate: state.satRate,
+            bondsRate: state.bondsRate,
+            isCoreIke: state.isCoreIke,
+            isSatIke: state.isSatIke,
+            isBondsIke: state.isBondsIke,
+            monthlyWithdrawal: state.monthlyWithdrawal,
+            withdrawalYears: state.withdrawalYears,
+            coreVolatility: state.coreVolatility,
+            satVolatility: state.satVolatility,
+            bondsVolatility: state.bondsVolatility,
+            iterations: 1000,
+            rebalancingStrategy: state.rebalancingStrategy,
+          };
+
+          // @ts-ignore
+          const result = await engine.generateMonteCarloData(params, state.customCoreWeight, state.customSatWeight);
+          set({ mcResult: result });
+        } catch (error) {
+          console.error("🟢 Monte Carlo Engine Error:", error);
+        }
+      },
     }),
     {
       name: 'kinetic-oracle-storage',
-      // Don't persist engine type, it's session-specific
       partialize: (state) => {
-        const { engineType, ...rest } = state;
+        const { engineType, mcResult, ...rest } = state;
         return rest;
       }
     }

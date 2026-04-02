@@ -22,6 +22,7 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
   const store = useSimulatorStore();
   const isDarkMode = store.isDarkMode;
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [isRiskExpanded, setIsRiskExpanded] = useState(false);
 
   const handleSave = async () => {
     const name = prompt("Podaj nazwę dla swojego portfela:", "Mój Portfel IKE");
@@ -291,6 +292,82 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
                 ))}
               </div>
               {checkIkeWarning()}
+            </div>
+
+            {/* === MONTE CARLO RISK SETTINGS === */}
+            <div className="pt-4 border-t border-outline-variant/10">
+              <button 
+                onClick={() => setIsRiskExpanded(!isRiskExpanded)}
+                className="w-full flex items-center justify-between text-[10px] font-label text-outline uppercase tracking-widest hover:text-primary transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm">analytics</span>
+                  Parametry Ryzyka (Monte Carlo)
+                </div>
+                <span className="material-symbols-outlined text-sm transition-transform duration-300" style={{ transform: isRiskExpanded ? 'rotate(180deg)' : 'rotate(0)' }}>
+                  expand_more
+                </span>
+              </button>
+              
+              <AnimatePresence>
+                {isRiskExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                    animate={{ height: 'auto', opacity: 1, marginTop: 16 }}
+                    exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                    className="overflow-hidden space-y-5"
+                  >
+                    <div className="bg-primary/5 rounded-xl p-4 border border-primary/20 space-y-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[9px] font-bold text-outline tracking-wider uppercase">Zmienność ŚWIAT (σ)</label>
+                          <span className="text-[10px] font-black text-secondary">{store.coreVolatility}%</span>
+                        </div>
+                        <input className="w-full accent-secondary" type="range" min="5" max="40" step="1" value={store.coreVolatility} onChange={(e) => store.setVolatility(Number(e.target.value), store.satVolatility, store.bondsVolatility)} />
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[9px] font-bold text-outline tracking-wider uppercase">Zmienność KRYPTO (σ)</label>
+                          <span className="text-[10px] font-black text-amber-500">{store.satVolatility}%</span>
+                        </div>
+                        <input className="w-full accent-amber-500" type="range" min="10" max="150" step="5" value={store.satVolatility} onChange={(e) => store.setVolatility(store.coreVolatility, Number(e.target.value), store.bondsVolatility)} />
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[9px] font-bold text-outline tracking-wider uppercase">Zmienność OBLIGACJE (σ)</label>
+                          <span className="text-[10px] font-black text-indigo-400">{store.bondsVolatility}%</span>
+                        </div>
+                        <input className="w-full accent-indigo-400" type="range" min="1" max="10" step="0.5" value={store.bondsVolatility} onChange={(e) => store.setVolatility(store.coreVolatility, store.satVolatility, Number(e.target.value))} />
+                      </div>
+
+                      <div className="pt-3 border-t border-primary/10">
+                        <label className="text-[9px] font-bold text-outline tracking-wider uppercase block mb-3 text-center">Strategia Rebalancingu</label>
+                        <div className="grid grid-cols-2 gap-2 bg-slate-200 dark:bg-black/20 p-1 rounded-xl">
+                          <button 
+                            onClick={() => store.setRebalancingStrategy(0)}
+                            className={`py-2 text-[8px] font-black uppercase rounded-lg transition-all ${store.rebalancingStrategy === 0 ? 'bg-primary text-black shadow-md' : 'text-outline/40 hover:text-outline'}`}
+                          >
+                            Brak (Dryf)
+                          </button>
+                          <button 
+                            onClick={() => store.setRebalancingStrategy(1)}
+                            className={`py-2 text-[8px] font-black uppercase rounded-lg transition-all ${store.rebalancingStrategy === 1 ? 'bg-primary text-black shadow-md' : 'text-outline/40 hover:text-outline'}`}
+                          >
+                            Twardy Roczny
+                          </button>
+                        </div>
+                        <p className="text-[8px] text-center text-outline/50 mt-2 italic px-2">
+                          {store.rebalancingStrategy === 1 
+                            ? "Wymusza wagi co 12 mies. Generuje Drift Tax na kontach BELKA." 
+                            : "Wpłaty dzielone wagami, kapitał rośnie swobodnie."}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>

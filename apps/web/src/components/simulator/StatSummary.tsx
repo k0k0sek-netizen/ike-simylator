@@ -60,6 +60,20 @@ export function StatSummary({ activeScenario, phase }: StatSummaryProps) {
               className="text-secondary font-headline font-bold text-lg" 
             />
           </div>
+
+          {/* Monte Carlo Success Rate Badge */}
+          {store.mcResult && (
+            <div className="flex items-center gap-2 mt-1">
+              <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-black uppercase tracking-widest ${
+                store.mcResult.successRate >= 90 ? 'bg-secondary/10 border-secondary/30 text-secondary' :
+                store.mcResult.successRate >= 75 ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' :
+                'bg-error/10 border-error/30 text-error'
+              }`}>
+                <span className="material-symbols-outlined text-xs">psychology</span>
+                Prawdopodobieństwo Sukcesu: {Math.round(store.mcResult.successRate)}%
+              </div>
+            </div>
+          )}
           
           <div className="flex flex-col gap-3 mt-4">
             <div className="flex justify-between items-center p-4 rounded-xl bg-white dark:bg-gray-800/50 border border-outline-variant/10 transition-all hover:bg-slate-50 dark:hover:bg-gray-800/80 duration-300">
@@ -198,6 +212,17 @@ export function StatSummary({ activeScenario, phase }: StatSummaryProps) {
           <span className="text-sm font-label text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             {bankruptAge ? 'do wyczerpania' : 'pełne pokrycie ✓'}
           </span>
+          
+          {/* Success Rate in Decumulation */}
+          {store.mcResult && (
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest ml-4 ${
+              store.mcResult.successRate >= 90 ? 'bg-secondary/10 border-secondary/30 text-secondary shadow-[0_0_15px_rgba(78,222,163,0.1)]' :
+              store.mcResult.successRate >= 75 ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' :
+              'bg-error/10 border-error/30 text-error animate-pulse'
+            }`}>
+              Szansa na sukces: {Math.round(store.mcResult.successRate)}%
+            </div>
+          )}
         </div>
         
         <div className="flex flex-col gap-3 mt-4">

@@ -58,6 +58,8 @@ export default function App() {
           monthlyWithdrawal: store.monthlyWithdrawal,
           withdrawalYears: store.withdrawalYears
         };
+        
+        // Deterministyczne przeliczenie
         const results = wasmModule.current.generateMultipleScenarios(
           inputParams, 
           store.customCoreWeight,
@@ -65,6 +67,9 @@ export default function App() {
         );
         
         setSimResults(results);
+
+        // Asynchroniczne przeliczenie Monte Carlo
+        store.calculateMonteCarlo();
       } catch (err) {
         console.error("Wasm calc error:", err);
       }
@@ -73,7 +78,8 @@ export default function App() {
     store.engineType, store.monthlyContribution, store.currentAge, store.retirementAge, store.inflationRate, 
     store.annualStepUp, store.coreRate, store.satRate, store.bondsRate, 
     store.isCoreIke, store.isSatIke, store.isBondsIke,
-    store.customCoreWeight, store.customSatWeight, store.monthlyWithdrawal, store.withdrawalYears
+    store.customCoreWeight, store.customSatWeight, store.monthlyWithdrawal, store.withdrawalYears,
+    store.coreVolatility, store.satVolatility, store.bondsVolatility, store.rebalancingStrategy
   ]);
 
   const activeScenario = simResults ? simResults[3] : null; 

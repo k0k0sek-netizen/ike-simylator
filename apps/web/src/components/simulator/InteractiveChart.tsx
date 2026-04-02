@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { createChart, ColorType, AreaSeries } from 'lightweight-charts';
+import { createChart, ColorType, AreaSeries, LineStyle, LineSeries } from 'lightweight-charts';
+import { useSimulatorStore } from '../../store/useSimulatorStore';
 
 export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario: any, wasmReady: boolean }) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -58,7 +59,25 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
         lineWidth: 2,
       });
 
-      chartRef.current = { chart, taxShieldSeries, netProfitSeries, baseSeries };
+      // --- Monte Carlo Series ---
+      const mcAreaSeries = chart.addSeries(AreaSeries, {
+        lineColor: 'rgba(78, 222, 163, 0.2)',
+        topColor: 'rgba(78, 222, 163, 0.2)',
+        bottomColor: 'rgba(78, 222, 163, 0.05)',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        priceFormat: { type: 'volume' },
+        visible: true,
+      });
+
+      const mcMedianSeries = chart.addSeries(LineSeries, {
+        color: 'rgba(78, 222, 163, 0.8)',
+        lineWidth: 2,
+        lineStyle: LineStyle.Dashed,
+        priceFormat: { type: 'volume' },
+      });
+
+      chartRef.current = { chart, taxShieldSeries, netProfitSeries, baseSeries, mcAreaSeries, mcMedianSeries };
 
       const handleResize = () => {
         if(chartContainerRef.current && chartRef.current) {
@@ -75,9 +94,11 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
   }, [wasmReady]);
 
   useEffect(() => {
+    const store = useSimulatorStore.getState();
     if (chartRef.current && activeScenario) {
-      const { taxShieldSeries, netProfitSeries, baseSeries } = chartRef.current;
+      const { taxShieldSeries, netProfitSeries, baseSeries, mcAreaSeries, mcMedianSeries } = chartRef.current;
       const currentYear = new Date().getFullYear();
+      const mcResult = store.mcResult;
       
       const taxShieldData = activeScenario.yearlyData.map((d: any) => ({
         time: `${currentYear + d.year}-01-01`,
@@ -97,6 +118,32 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
       taxShieldSeries.setData(taxShieldData);
       netProfitSeries.setData(netProfitData);
       baseSeries.setData(baseData);
+
+      // --- Monte Carlo Data Processing ---
+      if (mcResult && mcResult.points) {
+        const years = activeScenario.yearlyData.map((d: any) => d.year);
+        const startYearOffset = years[0];
+        const endYearOffset = years[years.length - 1];
+
+        const filteredMcPoints = mcResult.points.filter((p: any) => p.year >= startYearOffset && p.year <= endYearOffset);
+
+        const mcAreaData = filteredMcPoints.map((p: any) => ({
+          time: `${currentYear + p.year}-01-01`,
+          value: p.p90 // Górna granica lejka
+        }));
+
+        const mcMedianData = filteredMcPoints.map((p: any) => ({
+          time: `${currentYear + p.year}-01-01`,
+          value: p.p50 // Mediana
+        }));
+
+        mcAreaSeries.setData(mcAreaData);
+        mcMedianSeries.setData(mcMedianData);
+      } else {
+        mcAreaSeries.setData([]);
+        mcMedianSeries.setData([]);
+      }
+
       chartRef.current.chart.timeScale().fitContent();
     }
   }, [activeScenario]);
@@ -119,6 +166,10 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
         <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-black/20 px-2 py-1 rounded-full border border-slate-200 dark:border-transparent">
           <span className="w-2 h-2 rounded-full bg-slate-500 shadow-[0_0_5px_#64748b]"></span>
           <span className="text-[10px] font-label text-slate-900 dark:text-white tracking-widest uppercase font-bold">Wpłacony Kapitał</span>
+        </div>
+        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-black/20 px-2 py-1 rounded-full border border-slate-200 dark:border-transparent">
+          <span className="w-2 h-2 rounded-full border border-primary border-dashed shadow-[0_0_5px_#4edea3]"></span>
+          <span className="text-[10px] font-label text-slate-900 dark:text-white tracking-widest uppercase font-bold">Lejek Ryzyka (Monte Carlo)</span>
         </div>
       </div>
     </section>
