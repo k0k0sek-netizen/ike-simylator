@@ -134,7 +134,7 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
 
   if (phase === 'accumulation') {
     return (
-      <section className="space-y-8">
+      <section className="space-y-8" style={{ viewTransitionName: 'control-panel' }}>
         <div>
           <h3 className="text-sm font-label uppercase tracking-widest border-l-2 border-secondary pl-3 mb-6" style={{ color: isDarkMode ? '#ffffff' : '#0f172a' }}>
             Parametry Budowy Kapitału
@@ -378,7 +378,7 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
 
   // === KROK 2: FAZA DEKUMULACJI ===
   return (
-    <section className="space-y-6">
+    <section className="space-y-6" style={{ viewTransitionName: 'control-panel' }}>
       <h3 className="text-sm font-label uppercase tracking-widest border-l-2 border-error pl-3" style={{ color: isDarkMode ? '#ffffff' : '#0f172a' }}>
         Parametry Wypłat Emerytalnych
       </h3>

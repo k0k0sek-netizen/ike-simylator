@@ -110,3 +110,24 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(144, 143, 160, 0.5);
 }
+
+/* --- View Transitions API (Cinematic UX) --- */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.6s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+::view-transition-old(stats-summary),
+::view-transition-new(stats-summary),
+::view-transition-old(main-chart),
+::view-transition-new(main-chart),
+::view-transition-old(control-panel) {
+  animation-duration: 0.6s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Zapobieganie przeskokom paska przewijania podczas przejścia */
+::view-transition-group(root) {
+  overflow: clip;
+}

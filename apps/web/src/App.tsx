@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
+import { flushSync } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSimulatorStore } from './store/useSimulatorStore';
 
@@ -56,7 +57,12 @@ export default function App() {
           isSatIke: store.isSatIke,
           isBondsIke: store.isBondsIke,
           monthlyWithdrawal: store.monthlyWithdrawal,
-          withdrawalYears: store.withdrawalYears
+          withdrawalYears: store.withdrawalYears,
+          coreVolatility: store.coreVolatility,
+          satVolatility: store.satVolatility,
+          bondsVolatility: store.bondsVolatility,
+          iterations: 1, // Deterministyczny używa 1 iteracji
+          rebalancingStrategy: store.rebalancingStrategy,
         };
         
         // Deterministyczne przeliczenie
@@ -168,7 +174,17 @@ export default function App() {
           />
           
           <button 
-            onClick={() => store.setActivePhase('accumulation')}
+            onClick={() => {
+              if (!(document as any).startViewTransition) {
+                store.setActivePhase('accumulation');
+                return;
+              }
+              (document as any).startViewTransition(() => {
+                flushSync(() => {
+                  store.setActivePhase('accumulation');
+                });
+              });
+            }}
             style={{ color: isAccumulation ? (store.isDarkMode ? '#ffffff' : '#0f172a') : (store.isDarkMode ? 'rgba(255,255,255,0.4)' : '#64748b') }}
             className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-300 ${
               isAccumulation ? 'font-bold' : ''
@@ -179,7 +195,17 @@ export default function App() {
           </button>
           
           <button 
-            onClick={() => store.setActivePhase('decumulation')}
+            onClick={() => {
+              if (!(document as any).startViewTransition) {
+                store.setActivePhase('decumulation');
+                return;
+              }
+              (document as any).startViewTransition(() => {
+                flushSync(() => {
+                  store.setActivePhase('decumulation');
+                });
+              });
+            }}
             style={{ color: !isAccumulation ? (store.isDarkMode ? '#ffffff' : '#0f172a') : (store.isDarkMode ? 'rgba(255,255,255,0.4)' : '#64748b') }}
             className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-300 ${
               !isAccumulation ? 'font-bold' : ''

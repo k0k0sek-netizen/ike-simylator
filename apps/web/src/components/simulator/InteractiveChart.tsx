@@ -149,7 +149,7 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
   }, [activeScenario]);
 
   return (
-    <section className="relative w-full aspect-video bg-surface-container-lowest rounded-2xl group hover:shadow-[0_0_30px_rgba(78,222,163,0.1)] transition-all duration-500">
+    <section className="relative w-full aspect-video bg-surface-container-lowest rounded-2xl group hover:shadow-[0_0_30px_rgba(78,222,163,0.1)] transition-all duration-500" style={{ viewTransitionName: 'main-chart' }}>
       <div className="absolute inset-0 bg-linear-to-t from-secondary/5 to-transparent rounded-2xl pointer-events-none"></div>
       
       <div ref={chartContainerRef} className="absolute inset-0 w-full h-full p-4 drop-shadow-[0_0_15px_rgba(78,222,163,0.3)]" style={{ zIndex: 1 }} />

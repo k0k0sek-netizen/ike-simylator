@@ -41,7 +41,7 @@ export function StatSummary({ activeScenario, phase }: StatSummaryProps) {
   // === KROK 1: BUDOWA KAPITAŁU ===
   if (phase === 'accumulation') {
     return (
-      <section className="mt-2">
+      <section className="mt-2" style={{ viewTransitionName: 'stats-summary' }}>
         <div className="flex flex-col gap-1">
           <span className="text-xs font-label uppercase tracking-widest text-slate-500 dark:text-secondary/70">
             Prognozowany Kapitał ({years} Lat)
@@ -194,7 +194,7 @@ export function StatSummary({ activeScenario, phase }: StatSummaryProps) {
 
   // === KROK 2: FAZA WYPŁAT ===
   return (
-    <section className="mt-2">
+    <section className="mt-2" style={{ viewTransitionName: 'stats-summary' }}>
       <div className="flex flex-col gap-1">
         <span className="text-xs font-label uppercase tracking-widest text-error/70">
           Faza Wypłat — Przetrwanie Kapitału
