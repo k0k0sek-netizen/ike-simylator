@@ -10,19 +10,14 @@ import { ControlPanel } from './components/simulator/ControlPanel';
 import { YearlyDataTable } from './components/simulator/YearlyDataTable';
 import { TemplatesPanel } from './components/simulator/TemplatesPanel';
 import { PortfolioManager } from './components/simulator/PortfolioManager';
-import { SocialShareCard } from './components/ui/SocialShareCard';
 import { AnimatedCounter } from './components/ui/AnimatedCounter';
 import { ExportMenu } from './components/simulator/ExportMenu';
-import { PrintableReport } from './components/simulator/PrintableReport';
-import { useReactToPrint } from 'react-to-print';
-import html2canvas from 'html2canvas';
+import { exportToNativePDF, exportToIsolatedPNG } from './utils/exportUtils';
 
 export default function App() {
   const [simResults, setSimResults] = useState<any[] | null>(null);
 
   const wasmModule = useRef<any>(null);
-  const shareCardRef = useRef<HTMLDivElement>(null);
-  const reportRef = useRef<HTMLDivElement>(null);
   const store = useSimulatorStore();
 
   useEffect(() => {
@@ -106,27 +101,15 @@ export default function App() {
   const retirementData = activeScenario?.yearlyData?.find((d: any) => d.year === years);
   const capitalAtRetirement = retirementData ? retirementData.nominalBalance : 0;
 
-  const handlePrint = useReactToPrint({
-    contentRef: reportRef,
-  });
+  const handlePrint = () => {
+    if (activeScenario) {
+      exportToNativePDF(activeScenario, store);
+    }
+  };
 
   const handleExportPNG = async () => {
-    if (shareCardRef.current) {
-      try {
-        const canvas = await html2canvas(shareCardRef.current, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#0c0a1a',
-          logging: false,
-        });
-        const imgData = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.download = 'KineticOracle-Wrapped.png';
-        link.href = imgData;
-        link.click();
-      } catch (err) {
-        console.error('Błąd podczas generowania grafiki:', err);
-      }
+    if (activeScenario) {
+      await exportToIsolatedPNG(activeScenario, store);
     }
   };
 
@@ -256,20 +239,6 @@ export default function App() {
         />
         
         <TemplatesPanel simResults={simResults} />
-
-        {/* === HIDDEN EXPORT ASSETS === */}
-        <div style={{ position: 'absolute', left: '-9999px', pointerEvents: 'none' }}>
-           <PrintableReport 
-             key={`pdf-${store.monthlyContribution}-${store.currentAge}-${store.retirementAge}-${store.activePhase}`}
-             ref={reportRef} 
-             scenario={activeScenario} 
-           />
-           <SocialShareCard 
-             key={`png-${store.monthlyContribution}-${store.currentAge}-${store.retirementAge}-${store.activePhase}`}
-             ref={shareCardRef} 
-             scenario={activeScenario} 
-           />
-        </div>
       </main>
 
       <PortfolioManager 

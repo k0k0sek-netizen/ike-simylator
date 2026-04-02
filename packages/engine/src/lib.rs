@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
+use rand::prelude::*;
+use rand::rngs::SmallRng;
+use rand_distr::{Normal, Distribution};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -66,6 +69,22 @@ pub struct ScenarioResult {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
+pub struct MonteCarloPoint {
+    pub year: i32,
+    pub p10: f64,
+    pub p50: f64,
+    pub p90: f64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct MonteCarloSummary {
+    pub points: Vec<MonteCarloPoint>,
+    pub success_rate: f64, 
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct InputParams {
     pub monthly_contribution: f64,
     pub current_age: i32,
@@ -80,6 +99,12 @@ pub struct InputParams {
     pub is_bonds_ike: bool,
     pub monthly_withdrawal: f64,
     pub withdrawal_years: i32,
+    // --- Monte Carlo ---
+    pub core_volatility: f64,
+    pub sat_volatility: f64,
+    pub bonds_volatility: f64,
+    pub iterations: i32,
+    pub rebalancing_strategy: i32, // 0: None, 1: Annual
 }
 
 const IKE_LIMIT_2026: f64 = 26000.0;
@@ -422,6 +447,207 @@ fn generate_scenario_internal(
         tax_paid_sat: total_tax_paid_sat,
         tax_paid_bonds: total_tax_paid_bonds,
         yearly_data, color_class_light, color_class_dark, bankrupt_age,
+    }
+}
+
+// --- LOGIKA STOCHASTYCZNA (MONTE CARLO) ---
+
+fn get_monthly_random_return(annual_mean_pct: f64, annual_vol_pct: f64, rng: &mut impl Rng) -> f64 {
+    let mu = annual_mean_pct / 100.0 / 12.0;
+    let sigma = annual_vol_pct / 100.0 / f64::sqrt(12.0);
+    let normal = Normal::new(0.0, 1.0).unwrap();
+    let z = normal.sample(rng);
+    
+    // Uproszczony Random Walk: r = mu + sigma * Z
+    mu + sigma * z
+}
+
+#[wasm_bindgen(js_name = generateMonteCarloData)]
+pub fn generate_monte_carlo_data(params_val: JsValue, core_pct: f64, sat_pct: f64) -> Result<JsValue, JsValue> {
+    let params: InputParams = serde_wasm_bindgen::from_value(params_val)?;
+    let summary = run_monte_carlo_engine(params, core_pct, sat_pct);
+    Ok(serde_wasm_bindgen::to_value(&summary)?)
+}
+
+pub fn run_monte_carlo_engine(params: InputParams, core_pct: f64, sat_pct: f64) -> MonteCarloSummary {
+    let bonds_pct = 100.0 - core_pct - sat_pct;
+    let years = (params.retirement_age - params.current_age).max(1);
+    let total_years = years + params.withdrawal_years;
+    
+    let mut rng = SmallRng::from_entropy();
+    
+    // Store final balances for each iteration at each year milestone
+    // Vec<year>[num_iterations]
+    let mut year_milestones: Vec<Vec<f64>> = vec![Vec::with_capacity(params.iterations as usize); total_years as usize];
+    let mut bankrupt_counts = 0;
+
+    for _ in 0..params.iterations {
+        let mut core_nom = 0.0;
+        let mut sat_nom = 0.0;
+        let mut bonds_nom = 0.0;
+        let mut core_base = 0.0; // Pula kosztowa (wpłaty + rebalans)
+        let mut sat_base = 0.0;
+        let mut bonds_base = 0.0;
+        
+        let mut current_monthly_pmt = params.monthly_contribution;
+        let mut is_bankrupt = false;
+
+        for y in 1..=total_years {
+            let is_decumulation = y > years;
+            
+            // Roczny Rebalancing (na początku roku symulacji, jeśli nie rok 1)
+            if params.rebalancing_strategy == 1 && y > 1 && !is_bankrupt {
+                let total_nom = core_nom + sat_nom + bonds_nom;
+                if total_nom > 0.0 {
+                    // Core
+                    let target_core = total_nom * (core_pct / 100.0);
+                    let diff_core = core_nom - target_core;
+                    if diff_core > 0.0 && !params.is_core_ike {
+                        let profit_ratio = if core_nom > 0.0 { (core_nom - core_base).max(0.0) / core_nom } else { 0.0 };
+                        let tax = diff_core * profit_ratio * 0.19;
+                        core_nom -= tax;
+                    }
+                    
+                    // Sat
+                    let target_sat = total_nom * (sat_pct / 100.0);
+                    let diff_sat = sat_nom - target_sat;
+                    if diff_sat > 0.0 && !params.is_sat_ike {
+                        let profit_ratio = if sat_nom > 0.0 { (sat_nom - sat_base).max(0.0) / sat_nom } else { 0.0 };
+                        let tax = diff_sat * profit_ratio * 0.19;
+                        sat_nom -= tax;
+                    }
+
+                    // Bonds
+                    let target_bonds = total_nom * (bonds_pct / 100.0);
+                    let diff_bonds = bonds_nom - target_bonds;
+                    if diff_bonds > 0.0 && !params.is_bonds_ike {
+                        let profit_ratio = if bonds_nom > 0.0 { (bonds_nom - bonds_base).max(0.0) / bonds_nom } else { 0.0 };
+                        let tax = diff_bonds * profit_ratio * 0.19;
+                        bonds_nom -= tax;
+                    }
+
+                    // Wykonaj twardy przydział wg wag po potrąceniu podatków (pula się lekko kurczy)
+                    let new_total = core_nom + sat_nom + bonds_nom;
+                    core_nom = new_total * (core_pct / 100.0);
+                    sat_nom = new_total * (sat_pct / 100.0);
+                    bonds_nom = new_total * (bonds_pct / 100.0);
+                    
+                    // Reset bazy kosztowej po rebalansingu
+                    core_base = core_nom;
+                    sat_base = sat_nom;
+                    bonds_base = bonds_nom;
+                }
+            }
+
+            for _m in 1..=12 {
+                if is_bankrupt { break; }
+                
+                // 1. Losowe stopy
+                let r_core = get_monthly_random_return(params.core_rate + params.inflation_rate, params.core_volatility, &mut rng);
+                let r_sat = get_monthly_random_return(params.sat_rate + params.inflation_rate, params.sat_volatility, &mut rng);
+                let r_bonds = get_monthly_random_return(params.bonds_rate + params.inflation_rate, params.bonds_volatility, &mut rng);
+
+                // 2. Naliczenie odsetek nominalnych
+                core_nom *= 1.0 + r_core;
+                sat_nom *= 1.0 + r_sat;
+                bonds_nom *= 1.0 + r_bonds;
+
+                // 3. Przepływy
+                if !is_decumulation {
+                    let p_core = current_monthly_pmt * (core_pct / 100.0);
+                    let p_sat = current_monthly_pmt * (sat_pct / 100.0);
+                    let p_bonds = current_monthly_pmt * (bonds_pct / 100.0);
+                    
+                    core_nom += p_core;
+                    sat_nom += p_sat;
+                    bonds_nom += p_bonds;
+                    
+                    core_base += p_core;
+                    sat_base += p_sat;
+                    bonds_base += p_bonds;
+                } else {
+                    let total_n = core_nom + sat_nom + bonds_nom;
+                    let withdrawal = params.monthly_withdrawal.abs();
+                    
+                    if total_n <= withdrawal {
+                        core_nom = 0.0; sat_nom = 0.0; bonds_nom = 0.0;
+                        is_bankrupt = true;
+                        bankrupt_counts += 1;
+                    } else {
+                        let cw = core_nom / total_n;
+                        let sw = sat_nom / total_n;
+                        let bw = bonds_nom / total_n;
+                        core_nom -= withdrawal * cw;
+                        sat_nom -= withdrawal * sw;
+                        bonds_nom -= withdrawal * bw;
+                    }
+                }
+            }
+
+            year_milestones[(y - 1) as usize].push((core_nom + sat_nom + bonds_nom).max(0.0));
+            if !is_decumulation {
+                current_monthly_pmt *= 1.0 + params.annual_step_up / 100.0;
+            }
+        }
+    }
+
+    // Agregacja percentyli
+    let points: Vec<MonteCarloPoint> = year_milestones.iter().enumerate().map(|(i, values)| {
+        let mut sorted = values.clone();
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        
+        let len = sorted.len();
+        MonteCarloPoint {
+            year: (i + 1) as i32,
+            p10: sorted[(len as f64 * 0.1) as usize],
+            p50: sorted[(len as f64 * 0.5) as usize],
+            p90: sorted[(len as f64 * 0.9) as usize],
+        }
+    }).collect();
+
+    MonteCarloSummary {
+        points,
+        success_rate: 1.0 - (bankrupt_counts as f64 / params.iterations as f64),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rebalancing_tax_impact() {
+        let mut params = InputParams {
+            monthly_contribution: 1000.0,
+            current_age: 30,
+            retirement_age: 40,
+            inflation_rate: 0.0,
+            annual_step_up: 0.0,
+            core_rate: 10.0, // Wysoki zysk dla testu dryfu
+            sat_rate: 50.0,
+            bonds_rate: 2.0,
+            is_core_ike: false,
+            is_sat_ike: false,
+            is_bonds_ike: false,
+            monthly_withdrawal: 0.0,
+            withdrawal_years: 0,
+            core_volatility: 0.0, // Wyłączamy zmienność dla deterministycznego testu rebalansu
+            sat_volatility: 0.0,
+            bonds_volatility: 0.0,
+            iterations: 1,
+            rebalancing_strategy: 1, // Twardy rebalans
+        };
+
+        // Test 1: Zwykłe konto (Powinien zapłacić podatek od dryfu krypto)
+        let summary_taxable = run_monte_carlo_engine(params.clone(), 50.0, 50.0);
+        
+        // Test 2: IKE (Brak podatku od dryfu)
+        params.is_core_ike = true;
+        params.is_sat_ike = true;
+        let summary_ike = run_monte_carlo_engine(params, 50.0, 50.0);
+
+        // IKE powinno mieć więcej pieniędzy
+        assert!(summary_ike.points.last().unwrap().p50 > summary_taxable.points.last().unwrap().p50);
     }
 }
 
