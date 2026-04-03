@@ -43,6 +43,12 @@ export interface SimulatorState {
   rebalancingStrategy: number; // 0: None, 1: Annual
   mcResult: MonteCarloSummary | null;
 
+  // --- AI Advisor State ---
+  aiStatus: 'idle' | 'loading' | 'ready' | 'generating' | 'error';
+  aiProgress: number;
+  aiLastResponse: string | null;
+  aiError: string | null;
+
   setMonthlyContribution: (val: number) => void;
   setCurrentAge: (val: number) => void;
   setRetirementAge: (val: number) => void;
@@ -65,6 +71,12 @@ export interface SimulatorState {
   setVolatility: (core: number, sat: number, bonds: number) => void;
   setRebalancingStrategy: (val: number) => void;
   calculateMonteCarlo: () => Promise<void>;
+  
+  // --- AI Advisor Actions ---
+  initAI: () => Promise<void>;
+  calculateAIAdvice: () => Promise<void>;
+  setAIStatus: (status: SimulatorState['aiStatus']) => void;
+  setAIProgress: (progress: number) => void;
 }
 
 export const useSimulatorStore = create<SimulatorState>()(
@@ -97,6 +109,11 @@ export const useSimulatorStore = create<SimulatorState>()(
       bondsVolatility: 3,
       rebalancingStrategy: 1,
       mcResult: null,
+
+      aiStatus: 'idle',
+      aiProgress: 0,
+      aiLastResponse: null,
+      aiError: null,
 
       setMonthlyContribution: (val) => set({ monthlyContribution: val }),
       setCurrentAge: (val) => set({ currentAge: val }),
@@ -203,15 +220,48 @@ export const useSimulatorStore = create<SimulatorState>()(
           // @ts-ignore
           const result = await engine.generateMonteCarloData(params, state.customCoreWeight, state.customSatWeight);
           set({ mcResult: result });
+          
+          // Automatyczne odświeżenie porady AI po przeliczeniu Monte Carlo, jeśli AI jest gotowe
+          const currentState = get();
+          if (currentState.aiStatus === 'ready') {
+            currentState.calculateAIAdvice();
+          }
         } catch (error) {
           console.error("🟢 Monte Carlo Engine Error:", error);
+        }
+      },
+
+      setAIStatus: (status) => set({ aiStatus: status }),
+      setAIProgress: (progress) => set({ aiProgress: progress }),
+
+      initAI: async () => {
+        const { initWebLLM } = await import('../lib/aiEngine');
+        await initWebLLM();
+      },
+
+      calculateAIAdvice: async () => {
+        const state = get();
+        if (state.aiStatus !== 'ready' && state.aiStatus !== 'generating') return;
+        
+        set({ aiStatus: 'generating', aiError: null });
+        
+        try {
+          const { generateAdvice } = await import('../lib/aiEngine');
+          const { exportSimulationContext } = await import('../utils/contextExporter');
+          
+          const context = exportSimulationContext(state);
+          const advice = await generateAdvice(context);
+          
+          set({ aiLastResponse: advice, aiStatus: 'ready' });
+        } catch (err: any) {
+          set({ aiStatus: 'error', aiError: err.message });
         }
       },
     }),
     {
       name: 'kinetic-oracle-storage',
       partialize: (state) => {
-        const { engineType, mcResult, ...rest } = state;
+        const { engineType, mcResult, aiStatus, aiProgress, aiLastResponse, aiError, ...rest } = state;
         return rest;
       }
     }

@@ -11,6 +11,7 @@ import { ControlPanel } from './components/simulator/ControlPanel';
 import { YearlyDataTable } from './components/simulator/YearlyDataTable';
 import { TemplatesPanel } from './components/simulator/TemplatesPanel';
 import { PortfolioManager } from './components/simulator/PortfolioManager';
+import { AIAdvisorPanel } from './components/simulator/AIAdvisorPanel';
 import { AnimatedCounter } from './components/ui/AnimatedCounter';
 import { ExportMenu } from './components/simulator/ExportMenu';
 import { exportToNativePDF, exportToIsolatedPNG } from './utils/exportUtils';
@@ -270,6 +271,9 @@ export default function App() {
           finalNominal={capitalAtRetirement}
         />
         
+        {/* === KINETIC AI ADVISOR (Local Edge AI) === */}
+        <AIAdvisorPanel />
+
         <TemplatesPanel simResults={simResults} />
       </main>
 
