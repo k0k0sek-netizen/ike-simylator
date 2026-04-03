@@ -80,7 +80,8 @@ pub struct MonteCarloPoint {
 #[serde(rename_all = "camelCase")]
 pub struct MonteCarloSummary {
     pub points: Vec<MonteCarloPoint>,
-    pub success_rate: f64, 
+    pub success_rate: f64,
+    pub tax_paid_p50: f64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -257,73 +258,164 @@ fn generate_scenario_internal(
         if params.is_bonds_ike { initial_bonds_pmt *= reduction_factor; }
     }
 
-    let nominal_core_rate = params.core_rate + params.inflation_rate;
-    let nominal_sat_rate = params.sat_rate + params.inflation_rate;
-    let nominal_bonds_rate = params.bonds_rate + params.inflation_rate;
-    
     let years = params.retirement_age - params.current_age;
     let years = if years < 1 { 1 } else { years };
 
-    let mut accum_params = params.clone();
-    accum_params.withdrawal_years = 0;
+    let nominal_core_rate = params.core_rate + params.inflation_rate;
+    let nominal_sat_rate = params.sat_rate + params.inflation_rate;
+    let nominal_bonds_rate = params.bonds_rate + params.inflation_rate;
 
-    let core_data = calculate_scenario_data_internal(
-        initial_core_pmt, nominal_core_rate, params.core_rate, years, &accum_params, 0.0, params.is_core_ike
-    );
-    let sat_data = calculate_scenario_data_internal(
-        initial_sat_pmt, nominal_sat_rate, params.sat_rate, years, &accum_params, 0.0, params.is_sat_ike
-    );
-    let bonds_data = calculate_scenario_data_internal(
-        initial_bonds_pmt, nominal_bonds_rate, params.bonds_rate, years, &accum_params, 0.0, params.is_bonds_ike
-    );
+    let mut core_nom = 0.0;
+    let mut sat_nom = 0.0;
+    let mut bonds_nom = 0.0;
+    let mut core_real = 0.0;
+    let mut sat_real = 0.0;
+    let mut bonds_real = 0.0;
+    let mut core_base = 0.0;
+    let mut sat_base = 0.0;
+    let mut bonds_base = 0.0;
+
+    let mut total_invested_nominal = 0.0;
+    let mut total_invested_real = 0.0;
+    let mut total_base_invested = 0.0;
     
-    let total_invested_nominal = core_data.total_invested_nominal + sat_data.total_invested_nominal + bonds_data.total_invested_nominal;
-    let total_invested_real = core_data.total_invested_real + sat_data.total_invested_real + bonds_data.total_invested_real;
-    let total_base_invested = core_data.base_invested + sat_data.base_invested + bonds_data.base_invested;
-    let total_step_up_invested = total_invested_nominal - total_base_invested;
+    let mut total_tax_paid_core = 0.0;
+    let mut total_tax_paid_sat = 0.0;
+    let mut total_tax_paid_bonds = 0.0;
 
-    let total_years = years + params.withdrawal_years;
-    let mut yearly_data = Vec::with_capacity(total_years as usize);
+    let mut current_monthly_pmt = params.monthly_contribution;
+    let mut yearly_data = Vec::with_capacity((years + params.withdrawal_years) as usize);
 
-    for idx in 0..years as usize {
-        let cd = &core_data.yearly_data[idx];
-        let sd = &sat_data.yearly_data[idx];
-        let bd = &bonds_data.yearly_data[idx];
+    // --- FAZA AKUMULACJI ZE WSPÓLNYM REBALANCINGIEM ---
+    for y in 1..=years {
+        // Roczny Rebalancing (na początku roku symulacji, jeśli nie rok 1)
+        if params.rebalancing_strategy == 1 && y > 1 {
+            let total_nom = core_nom + sat_nom + bonds_nom;
+            if total_nom > 0.0 {
+                let mut current_total_tax = 0.0;
+                
+                // Core
+                let target_core = total_nom * (core_pct / 100.0);
+                if core_nom > target_core && !params.is_core_ike {
+                    let diff = core_nom - target_core;
+                    let profit_ratio = if core_nom > 0.0 { (core_nom - core_base).max(0.0) / core_nom } else { 0.0 };
+                    let tax = diff * profit_ratio * 0.19;
+                    current_total_tax += tax;
+                    total_tax_paid_core += tax;
+                }
+                // Sat
+                let target_sat = total_nom * (sat_pct / 100.0);
+                if sat_nom > target_sat && !params.is_sat_ike {
+                    let diff = sat_nom - target_sat;
+                    let profit_ratio = if sat_nom > 0.0 { (sat_nom - sat_base).max(0.0) / sat_nom } else { 0.0 };
+                    let tax = diff * profit_ratio * 0.19;
+                    current_total_tax += tax;
+                    total_tax_paid_sat += tax;
+                }
+                // Bonds
+                let target_bonds = total_nom * (100.0 - core_pct - sat_pct) / 100.0;
+                if bonds_nom > target_bonds && !params.is_bonds_ike {
+                    let diff = bonds_nom - target_bonds;
+                    let profit_ratio = if bonds_nom > 0.0 { (bonds_nom - bonds_base).max(0.0) / bonds_nom } else { 0.0 };
+                    let tax = diff * profit_ratio * 0.19;
+                    current_total_tax += tax;
+                    total_tax_paid_bonds += tax;
+                }
+
+                let new_total = total_nom - current_total_tax;
+                // Accumulators are already updated inside the target_core/sat/bonds checks
+                
+                core_nom = new_total * (core_pct / 100.0);
+                sat_nom = new_total * (sat_pct / 100.0);
+                bonds_nom = new_total * (100.0 - core_pct - sat_pct) / 100.0;
+                
+                core_base = core_nom;
+                sat_base = sat_nom;
+                bonds_base = bonds_nom;
+            }
+        }
+
+        let mut yearly_nominal_interest = 0.0;
+        let mut yearly_invested_nominal = 0.0;
+
+        for m in 1..=12 {
+            let total_months = (y - 1) * 12 + m;
+            let current_inf = f64::powf(1.0 + params.inflation_rate / 100.0, (total_months as f64) / 12.0);
+
+            // Naliczenie int
+            let c_i = core_nom * (nominal_core_rate / 100.0 / 12.0);
+            let s_i = sat_nom * (nominal_sat_rate / 100.0 / 12.0);
+            let b_i = bonds_nom * (nominal_bonds_rate / 100.0 / 12.0);
+            
+            yearly_nominal_interest += c_i + s_i + b_i;
+            core_nom += c_i; sat_nom += s_i; bonds_nom += b_i;
+
+            let c_i_r = core_real * (params.core_rate / 100.0 / 12.0);
+            let s_i_r = sat_real * (params.sat_rate / 100.0 / 12.0);
+            let b_i_r = bonds_real * (params.bonds_rate / 100.0 / 12.0);
+            core_real += c_i_r; sat_real += s_i_r; bonds_real += b_i_r;
+
+            // Wpłaty
+            let p_c = current_monthly_pmt * (core_pct / 100.0);
+            let p_s = current_monthly_pmt * (sat_pct / 100.0);
+            let p_b = current_monthly_pmt * (100.0 - core_pct - sat_pct) / 100.0;
+
+            core_nom += p_c; sat_nom += p_s; bonds_nom += p_b;
+            core_base += p_c; sat_base += p_s; bonds_base += p_b;
+            total_base_invested += p_c + p_s + p_b;
+            
+            total_invested_nominal += p_c + p_s + p_b;
+            yearly_invested_nominal += p_c + p_s + p_b;
+            
+            let real_p = (p_c + p_s + p_b) / current_inf;
+            core_real += p_c / current_inf;
+            sat_real += p_s / current_inf;
+            bonds_real += p_b / current_inf;
+            total_invested_real += real_p;
+        }
+
+        let total_n = core_nom + sat_nom + bonds_nom;
+        let unrealized_tax_core = (core_nom - core_base).max(0.0) * (if params.is_core_ike { 0.0 } else { 0.19 });
+        let unrealized_tax_sat = (sat_nom - sat_base).max(0.0) * (if params.is_sat_ike { 0.0 } else { 0.19 });
+        let unrealized_tax_bonds = (bonds_nom - bonds_base).max(0.0) * (if params.is_bonds_ike { 0.0 } else { 0.19 });
+        
+        let cumulative_tax_paid = total_tax_paid_core + total_tax_paid_sat + total_tax_paid_bonds 
+                                + unrealized_tax_core + unrealized_tax_sat + unrealized_tax_bonds;
+
+        let total_profit = total_n - total_invested_nominal;
+        let b_tax_theoretic = if total_profit > 0.0 { total_profit * 0.19 } else { 0.0 };
+
         yearly_data.push(YearlyData {
-            year: cd.year,
-            monthly_pmt: cd.monthly_pmt + sd.monthly_pmt + bd.monthly_pmt,
-            yearly_invested_nominal: cd.yearly_invested_nominal + sd.yearly_invested_nominal + bd.yearly_invested_nominal,
-            nominal_interest: cd.nominal_interest + sd.nominal_interest + bd.nominal_interest,
-            nominal_balance: cd.nominal_balance + sd.nominal_balance + bd.nominal_balance,
-            real_balance: cd.real_balance + sd.real_balance + bd.real_balance,
-            total_invested_nominal: cd.total_invested_nominal + sd.total_invested_nominal + bd.total_invested_nominal,
-            total_invested_real: cd.total_invested_real + sd.total_invested_real + bd.total_invested_real,
-            net_profit: cd.net_profit + sd.net_profit + bd.net_profit,
-            tax_shield: cd.tax_shield + sd.tax_shield + bd.tax_shield,
-            tax_paid: cd.tax_paid + sd.tax_paid + bd.tax_paid,
+            year: y,
+            monthly_pmt: current_monthly_pmt,
+            yearly_invested_nominal,
+            nominal_interest: yearly_nominal_interest,
+            nominal_balance: total_n,
+            real_balance: core_real + sat_real + bonds_real,
+            total_invested_nominal,
+            total_invested_real,
+            net_profit: if params.is_core_ike && params.is_sat_ike && params.is_bonds_ike { total_profit } else { total_profit - cumulative_tax_paid },
+            tax_shield: if params.is_core_ike { b_tax_theoretic } else { 0.0 },
+            tax_paid: cumulative_tax_paid,
         });
+
+        current_monthly_pmt *= 1.0 + params.annual_step_up / 100.0;
     }
 
     // === FAZA DEKUMULACJI: 3-składnikowy rebalancing ===
-    let mut core_nom = core_data.nominal_balance;
-    let mut sat_nom = sat_data.nominal_balance;
-    let mut bonds_nom = bonds_data.nominal_balance;
-    let mut core_real = core_data.real_balance;
-    let mut sat_real = sat_data.real_balance;
-    let mut bonds_real = bonds_data.real_balance;
-
-    let core_nom_monthly_rate = nominal_core_rate / 100.0 / 12.0;
-    let sat_nom_monthly_rate = nominal_sat_rate / 100.0 / 12.0;
-    let bonds_nom_monthly_rate = nominal_bonds_rate / 100.0 / 12.0;
+    // core_nom, sat_nom, bonds_nom przetrwały pętlę akumulacji
+    let core_nom_monthly_rate = (params.core_rate + params.inflation_rate) / 100.0 / 12.0;
+    let sat_nom_monthly_rate = (params.sat_rate + params.inflation_rate) / 100.0 / 12.0;
+    let bonds_nom_monthly_rate = (params.bonds_rate + params.inflation_rate) / 100.0 / 12.0;
     let core_real_monthly_rate = params.core_rate / 100.0 / 12.0;
     let sat_real_monthly_rate = params.sat_rate / 100.0 / 12.0;
     let bonds_real_monthly_rate = params.bonds_rate / 100.0 / 12.0;
 
     let monthly_withdrawal = params.monthly_withdrawal.abs();
+    let withdrawal_years = params.withdrawal_years;
     let mut bankrupt_age: Option<i32> = None;
-    let mut total_tax_paid_core = core_data.tax_paid_core;
-    let mut total_tax_paid_sat = sat_data.tax_paid_core; // Sub-calc returns in _core field
-    let mut total_tax_paid_bonds = bonds_data.tax_paid_core;
+    // Keep the taxes paid from accumulation
+    // total_tax_paid_core/sat/bonds already contain taxes from rebalancing phase
 
     for y in 1..=params.withdrawal_years {
         let actual_year = years + y;
@@ -436,6 +528,8 @@ fn generate_scenario_internal(
     // Summary total profit tax shield
     let tax_shield = if nominal_profit > 0.0 { nominal_profit * 0.19 } else { 0.0 };
 
+    let total_step_up_invested = total_invested_nominal - total_base_invested;
+
     ScenarioResult {
         title, description, core_pct, sat_pct, bonds_pct,
         initial_core_pmt, initial_sat_pmt, initial_bonds_pmt,
@@ -480,14 +574,16 @@ pub fn run_monte_carlo_engine(params: InputParams, core_pct: f64, sat_pct: f64) 
     // Vec<year>[num_iterations]
     let mut year_milestones: Vec<Vec<f64>> = vec![Vec::with_capacity(params.iterations as usize); total_years as usize];
     let mut bankrupt_counts = 0;
+    let mut total_tax_paid_acc = 0.0;
 
     for _ in 0..params.iterations {
         let mut core_nom = 0.0;
         let mut sat_nom = 0.0;
         let mut bonds_nom = 0.0;
-        let mut core_base = 0.0; // Pula kosztowa (wpłaty + rebalans)
+        let mut core_base = 0.0; 
         let mut sat_base = 0.0;
         let mut bonds_base = 0.0;
+        let mut total_tax_paid_in_iteration = 0.0;
         
         let mut current_monthly_pmt = params.monthly_contribution;
         let mut is_bankrupt = false;
@@ -499,13 +595,16 @@ pub fn run_monte_carlo_engine(params: InputParams, core_pct: f64, sat_pct: f64) 
             if params.rebalancing_strategy == 1 && y > 1 && !is_bankrupt {
                 let total_nom = core_nom + sat_nom + bonds_nom;
                 if total_nom > 0.0 {
+                    let mut current_total_tax = 0.0;
+                    
+                    // Oblicz podatek od nadwyżek (zdarzenie podatkowe sprzedaży)
                     // Core
                     let target_core = total_nom * (core_pct / 100.0);
                     let diff_core = core_nom - target_core;
                     if diff_core > 0.0 && !params.is_core_ike {
                         let profit_ratio = if core_nom > 0.0 { (core_nom - core_base).max(0.0) / core_nom } else { 0.0 };
                         let tax = diff_core * profit_ratio * 0.19;
-                        core_nom -= tax;
+                        current_total_tax += tax;
                     }
                     
                     // Sat
@@ -514,7 +613,7 @@ pub fn run_monte_carlo_engine(params: InputParams, core_pct: f64, sat_pct: f64) 
                     if diff_sat > 0.0 && !params.is_sat_ike {
                         let profit_ratio = if sat_nom > 0.0 { (sat_nom - sat_base).max(0.0) / sat_nom } else { 0.0 };
                         let tax = diff_sat * profit_ratio * 0.19;
-                        sat_nom -= tax;
+                        current_total_tax += tax;
                     }
 
                     // Bonds
@@ -523,16 +622,19 @@ pub fn run_monte_carlo_engine(params: InputParams, core_pct: f64, sat_pct: f64) 
                     if diff_bonds > 0.0 && !params.is_bonds_ike {
                         let profit_ratio = if bonds_nom > 0.0 { (bonds_nom - bonds_base).max(0.0) / bonds_nom } else { 0.0 };
                         let tax = diff_bonds * profit_ratio * 0.19;
-                        bonds_nom -= tax;
+                        current_total_tax += tax;
                     }
 
-                    // Wykonaj twardy przydział wg wag po potrąceniu podatków (pula się lekko kurczy)
-                    let new_total = core_nom + sat_nom + bonds_nom;
-                    core_nom = new_total * (core_pct / 100.0);
-                    sat_nom = new_total * (sat_pct / 100.0);
-                    bonds_nom = new_total * (bonds_pct / 100.0);
+                    // NOWY TOTAL PO PODATKU (fizyczne uszczuplenie portfela)
+                    let new_total_after_tax = total_nom - current_total_tax;
+                    total_tax_paid_in_iteration += current_total_tax;
                     
-                    // Reset bazy kosztowej po rebalansingu
+                    // Redystrybucja NETTO wg wag
+                    core_nom = new_total_after_tax * (core_pct / 100.0);
+                    sat_nom = new_total_after_tax * (sat_pct / 100.0);
+                    bonds_nom = new_total_after_tax * (bonds_pct / 100.0);
+                    
+                    // Reset bazy kosztowej po rebalansingu (zdarzenie zamknięte)
                     core_base = core_nom;
                     sat_base = sat_nom;
                     bonds_base = bonds_nom;
@@ -589,6 +691,12 @@ pub fn run_monte_carlo_engine(params: InputParams, core_pct: f64, sat_pct: f64) 
                 current_monthly_pmt *= 1.0 + params.annual_step_up / 100.0;
             }
         }
+        
+        // Final tax for this iteration (residual)
+        let final_unrealized_profit = (core_nom - core_base).max(0.0) * (if params.is_core_ike { 0.0 } else { 1.0 })
+                                    + (sat_nom - sat_base).max(0.0) * (if params.is_sat_ike { 0.0 } else { 1.0 })
+                                    + (bonds_nom - bonds_base).max(0.0) * (if params.is_bonds_ike { 0.0 } else { 1.0 });
+        total_tax_paid_acc += total_tax_paid_in_iteration + (final_unrealized_profit * 0.19);
     }
 
     // Agregacja percentyli
@@ -608,8 +716,10 @@ pub fn run_monte_carlo_engine(params: InputParams, core_pct: f64, sat_pct: f64) 
     MonteCarloSummary {
         points,
         success_rate: 1.0 - (bankrupt_counts as f64 / params.iterations as f64),
+        tax_paid_p50: total_tax_paid_acc / params.iterations as f64,
     }
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -618,36 +728,36 @@ mod tests {
     #[test]
     fn test_rebalancing_tax_impact() {
         let mut params = InputParams {
-            monthly_contribution: 1000.0,
+            monthly_contribution: 2000.0,
             current_age: 30,
-            retirement_age: 40,
+            retirement_age: 60,
             inflation_rate: 0.0,
             annual_step_up: 0.0,
-            core_rate: 10.0, // Wysoki zysk dla testu dryfu
-            sat_rate: 50.0,
+            core_rate: 5.0,
+            sat_rate: 100.0, 
             bonds_rate: 2.0,
             is_core_ike: false,
             is_sat_ike: false,
             is_bonds_ike: false,
             monthly_withdrawal: 0.0,
             withdrawal_years: 0,
-            core_volatility: 0.0, // Wyłączamy zmienność dla deterministycznego testu rebalansu
+            core_volatility: 0.0, 
             sat_volatility: 0.0,
             bonds_volatility: 0.0,
-            iterations: 1,
-            rebalancing_strategy: 1, // Twardy rebalans
+            iterations: 1, 
+            rebalancing_strategy: 1, 
         };
 
-        // Test 1: Zwykłe konto (Powinien zapłacić podatek od dryfu krypto)
-        let summary_taxable = run_monte_carlo_engine(params.clone(), 50.0, 50.0);
-        
-        // Test 2: IKE (Brak podatku od dryfu)
+        let result_taxable = run_monte_carlo_engine(params.clone(), 80.0, 20.0);
+        let final_taxable = result_taxable.points.last().unwrap().p50;
+
         params.is_core_ike = true;
         params.is_sat_ike = true;
-        let summary_ike = run_monte_carlo_engine(params, 50.0, 50.0);
+        let result_ike = run_monte_carlo_engine(params.clone(), 80.0, 20.0);
+        let final_ike = result_ike.points.last().unwrap().p50;
 
-        // IKE powinno mieć więcej pieniędzy
-        assert!(summary_ike.points.last().unwrap().p50 > summary_taxable.points.last().unwrap().p50);
+        println!("FINAL IKE: {}, FINAL BELKA: {}", final_ike, final_taxable);
+        assert!(final_ike > final_taxable + 1000.0);
     }
 }
 
