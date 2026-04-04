@@ -22,3 +22,10 @@ Projekt jest dedykowany dla **świadomych inwestorów**, którzy optymalizują o
 *   **Export**: Native Export Engine — autorski wzorzec generowania dokumentów PDF/PNG przez izolowany HTML/DOM (bypass dla asynchroniczności).
 *   **UX/UI**: Tailwind v4 + Framer Motion — kinetyczne liczniki i mikro-interakcje.
 *   **Wasm-React Bridge**: Agregacyjna optymalizacja payloadu statystycznego (percentyle P10/50/90 liczone po stronie Rust) dla płynnej wizualizacji probabilistycznej (Area Charts).
+
+---
+### AKTUALIZACJA ARCHITEKTURY: Migracja Groq Cloud AI (2026-04-04)
+- **Zmiana**: Rezygnacja z lokalnego silnika WebLLM (Edge AI) na rzecz wysokowydajnego API Groq.
+- **Powód**: Problemy ze stabilnością GPU na maszynach klienckich oraz chęć zapewnienia "Premium UX" przez model DeepSeek-R1-70B.
+- **Prywatność**: Dane symulacji są anonimizowane przed wysyłką. Brak zbierania danych osobowych.
+- **Komunikacja**: Od tego momentu pełna komunikacja systemowa oraz kod źródłowy obsługiwane są w języku POLSKIM.

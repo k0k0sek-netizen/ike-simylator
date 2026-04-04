@@ -46,54 +46,30 @@ export function AIAdvisorPanel() {
                 Kinetic AI Advisor
               </h3>
               <p className={`text-[10px] font-label uppercase tracking-wider font-bold ${store.aiStatus === 'ready' ? 'text-secondary' : 'text-slate-500'}`}>
-                {store.aiStatus === 'idle' && (
-                  (navigator as any).gpu ? 'Deep Tech Audit Ready' : 'Ready: Safe Engine (CPU)'
-                )}
-                {store.aiStatus === 'loading' && `Inicjalizacja: ${store.aiProgress}%`}
-                {store.aiStatus === 'ready' && (store.aiModel.includes('Phi-3') || store.aiModel.includes('Qwen') ? 'Analityk Turbo Aktywny (GPU)' : 'Tryb Kompatybilny Aktywny (CPU)')}
+                {store.aiStatus === 'idle' && 'Gotowy do analizy'}
+                {store.aiStatus === 'ready' && 'Analityk DeepSeek-R1 Aktywny (Cloud)'}
                 {store.aiStatus === 'generating' && 'Analiza portfela...'}
+                {store.aiStatus === 'error' && 'Błąd systemu AI'}
               </p>
             </div>
           </div>
 
           <button 
             onClick={handleAsk}
-            disabled={store.aiStatus === 'loading' || store.aiStatus === 'generating'}
+            disabled={store.aiStatus === 'generating'}
             className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
               store.aiStatus === 'idle' 
                 ? 'bg-primary text-background hover:scale-105 active:scale-95 shadow-lg shadow-primary/20' 
                 : 'border border-primary/30 text-primary hover:bg-primary/5'
             } disabled:opacity-50`}
           >
-            {store.aiStatus === 'idle' ? 'Zainicjuj AI Advisor' : 'Odśwież poradę'}
+            {store.aiStatus === 'idle' ? 'Zadaj pytanie' : 'Odśwież analizę'}
           </button>
         </div>
 
         {/* AI Response Area */}
         <AnimatePresence mode="wait">
-          {store.aiStatus === 'loading' && (
-            <motion.div 
-              key="loading-ai"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="space-y-4"
-            >
-              <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                <motion.div 
-                  className="h-full bg-primary shadow-[0_0_15px_rgba(192,193,255,0.5)]"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${store.aiProgress}%` }}
-                  transition={{ duration: 0.5 }}
-                />
-              </div>
-              <p className="text-center text-[10px] text-slate-500 dark:text-white/40 uppercase tracking-widest font-bold">
-                {!!(navigator as any).gpu 
-                  ? 'Ładowanie modelu Qwen2 (350 MB) do pamięci GPU...' 
-                  : 'Ładowanie modelu Llama-3.2 (650 MB) do pamięci operacyjnej...'}
-              </p>
-            </motion.div>
-          )}
+          {/* Sekcja ładowania (pobierania modelu) została usunięta - Groq jest natychmiastowy */}
 
           {store.aiStatus === 'generating' && (
             <motion.div 
@@ -102,12 +78,12 @@ export function AIAdvisorPanel() {
               animate={{ opacity: 1 }}
               className="flex flex-col gap-3 py-4"
             >
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
                 <div className="w-2 h-2 rounded-full bg-primary animate-bounce shadow-sm"></div>
                 <div className="w-2 h-2 rounded-full bg-primary animate-bounce delay-100 shadow-sm"></div>
                 <div className="w-2 h-2 rounded-full bg-primary animate-bounce delay-200 shadow-sm"></div>
+                <p className="text-xs font-body italic text-slate-500 ml-2">Konsultacja z Wyrocznią chmurową...</p>
               </div>
-              <p className="text-xs font-body italic text-slate-500">Konsultacja z Wyrocznią...</p>
             </motion.div>
           )}
 
@@ -119,7 +95,7 @@ export function AIAdvisorPanel() {
               className="relative p-5 rounded-2xl bg-secondary/5 border border-secondary/20 shadow-inner group"
             >
               <div className="absolute top-2 right-4 text-[10px] font-black uppercase text-secondary/40 tracking-widest pointer-events-none">
-                AI ANALYTICS - PHI-3-MINI
+                AI ANALYTICS - LLAMA 3.3 70B
               </div>
               
               <div className="prose prose-invert prose-sm max-w-none prose-headings:font-headline prose-p:font-body prose-p:leading-relaxed text-slate-700 dark:text-slate-200">
@@ -135,16 +111,21 @@ export function AIAdvisorPanel() {
               className="p-4 rounded-xl bg-error/10 border border-error/30 flex items-center gap-3"
             >
               <span className="material-symbols-outlined text-error">warning</span>
-              <p className="text-xs text-error font-bold uppercase tracking-wider">{store.aiError || 'Błąd krytyczny WebGPU'}</p>
+              <p className="text-xs text-error font-bold uppercase tracking-wider">{store.aiError || 'Błąd komunikacji z chmurą'}</p>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Privacy Note */}
-        <div className="mt-6 flex items-center gap-2 pt-4 border-t border-white/5">
-          <span className="material-symbols-outlined text-slate-600 text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>lock</span>
-          <p className="text-[9px] font-label text-slate-500 uppercase tracking-widest font-black">
-            100% Privacy-First: Twoje dane finansowe nigdy nie opuszczają tej przeglądarki.
+        {/* Nota o prywatności i przetwarzaniu w chmurze */}
+        <div className="mt-6 flex flex-col gap-2 pt-4 border-t border-white/5">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-slate-600 text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>lock</span>
+            <p className="text-[9px] font-label text-slate-500 uppercase tracking-widest font-black">
+              Prywatność przez anonimizację parametrów.
+            </p>
+          </div>
+          <p className="text-[8px] leading-relaxed text-slate-500/60 font-body uppercase tracking-tighter">
+            W celu analizy, anonimowe parametry Twojej symulacji zostaną przesłane do chmurowego modelu AI (Groq). Żadne dane osobowe nie są zbierane ani przechowywane.
           </p>
         </div>
       </div>

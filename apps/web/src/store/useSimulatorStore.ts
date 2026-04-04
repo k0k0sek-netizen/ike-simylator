@@ -43,10 +43,8 @@ export interface SimulatorState {
   rebalancingStrategy: number; // 0: None, 1: Annual
   mcResult: MonteCarloSummary | null;
 
-  // --- AI Advisor State ---
-  aiStatus: 'idle' | 'loading' | 'ready' | 'generating' | 'error';
-  aiProgress: number;
-  aiModel: string;
+  // --- Stan Doradcy AI ---
+  aiStatus: 'idle' | 'ready' | 'generating' | 'error';
   aiLastResponse: string | null;
   aiError: string | null;
 
@@ -73,12 +71,10 @@ export interface SimulatorState {
   setRebalancingStrategy: (val: number) => void;
   calculateMonteCarlo: () => Promise<void>;
   
-  // --- AI Advisor Actions ---
+  // --- Akcje Doradcy AI ---
   initAI: () => Promise<void>;
   calculateAIAdvice: () => Promise<void>;
   setAIStatus: (status: SimulatorState['aiStatus']) => void;
-  setAIProgress: (progress: number) => void;
-  setAIModel: (model: string) => void;
 }
 
 export const useSimulatorStore = create<SimulatorState>()(
@@ -113,8 +109,6 @@ export const useSimulatorStore = create<SimulatorState>()(
       mcResult: null,
 
       aiStatus: 'idle',
-      aiProgress: 0,
-      aiModel: '',
       aiLastResponse: null,
       aiError: null,
 
@@ -235,26 +229,35 @@ export const useSimulatorStore = create<SimulatorState>()(
       },
 
       setAIStatus: (status) => set({ aiStatus: status }),
-      setAIProgress: (progress) => set({ aiProgress: progress }),
-      setAIModel: (model) => set({ aiModel: model }),
 
+      /**
+       * Inicjalizuje AI — w przypadku Groq sprawdza dostępność klucza API.
+       */
       initAI: async () => {
-        const { initWebLLM } = await import('../lib/aiEngine');
-        await initWebLLM();
+        const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+        if (!apiKey) {
+          set({ aiStatus: 'error', aiError: 'Brak klucza API Groq (VITE_GROQ_API_KEY)' });
+        } else {
+          set({ aiStatus: 'ready' });
+        }
       },
 
+      /**
+       * Wysyła zapytanie do Groq API i pobiera analizę portfela.
+       */
       calculateAIAdvice: async () => {
         const state = get();
-        if (state.aiStatus !== 'ready' && state.aiStatus !== 'generating') return;
+        // Pozwalamy na generowanie tylko jeśli mamy status ready lub error (retry)
+        if (state.aiStatus === 'generating') return;
         
         set({ aiStatus: 'generating', aiError: null });
         
         try {
-          const { generateAdvice } = await import('../lib/aiEngine');
+          const { getGroqAIAdvice } = await import('../lib/groqService');
           const { exportSimulationContext } = await import('../utils/contextExporter');
           
           const context = exportSimulationContext(state);
-          const advice = await generateAdvice(context);
+          const advice = await getGroqAIAdvice(context);
           
           set({ aiLastResponse: advice, aiStatus: 'ready' });
         } catch (err: any) {
@@ -265,7 +268,7 @@ export const useSimulatorStore = create<SimulatorState>()(
     {
       name: 'kinetic-oracle-storage',
       partialize: (state) => {
-        const { engineType, mcResult, aiStatus, aiProgress, aiModel, aiLastResponse, aiError, ...rest } = state;
+        const { engineType, mcResult, aiStatus, aiLastResponse, aiError, ...rest } = state;
         return rest;
       }
     }
