@@ -90,7 +90,7 @@ export function AIAdvisorPanel() {
               <p className="text-center text-[10px] text-slate-500 dark:text-white/40 uppercase tracking-widest font-bold">
                 {!!(navigator as any).gpu 
                   ? 'Ładowanie modelu Qwen2 (350 MB) do pamięci GPU...' 
-                  : 'Ładowanie modelu TinyLlama (600 MB) do pamięci operacyjnej...'}
+                  : 'Ładowanie modelu Llama-3.2 (650 MB) do pamięci operacyjnej...'}
               </p>
             </motion.div>
           )}

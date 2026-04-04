@@ -4,7 +4,7 @@ import { useSimulatorStore } from "../store/useSimulatorStore";
 
 const MODELS = {
   TURBO: "Qwen2-0.5B-Instruct-q4f16_1-MLC", 
-  SAFE: "TinyLlama-1.1B-Chat-v1.0-q4f32_1-MLC" // Gwarantowany publiczny model f32 (WASM friendly)
+  SAFE: "Llama-3.2-1B-Instruct-q4f32_1-MLC" // Natywny fallback f32 (WASM compatible)
 };
 
 let engine: MLCEngine | null = null;
@@ -65,23 +65,7 @@ export async function initWebLLM() {
 
     engine = await CreateMLCEngine(
       currentModelId,
-      { 
-        initProgressCallback: progressCallback,
-        appConfig: {
-          model_list: [
-            {
-              model: "https://huggingface.co/mlc-ai/TinyLlama-1.1B-Chat-v1.0-q4f32_1-MLC",
-              model_id: MODELS.SAFE,
-              model_lib: "https://raw.githubusercontent.com/mlc-ai/binary-mlc-llm-libs/main/web-llm-models/v0_2_12/TinyLlama-1.1B-Chat-v1.0-q4f32_1-MLC-wasm64.wasm"
-            },
-            {
-              model: "https://huggingface.co/mlc-ai/Qwen2-0.5B-Instruct-q4f16_1-MLC",
-              model_id: MODELS.TURBO,
-              model_lib: "https://raw.githubusercontent.com/mlc-ai/binary-mlc-llm-libs/main/web-llm-models/v0_2_12/Qwen2-0.5B-Instruct-q4f16_1-MLC-webgpu.wasm"
-            }
-          ]
-        }
-      }
+      { initProgressCallback: progressCallback }
     );
 
     store.setAIStatus('ready');
