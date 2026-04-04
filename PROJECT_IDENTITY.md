@@ -21,3 +21,4 @@ Projekt jest dedykowany dla **świadomych inwestorów**, którzy optymalizują o
 *   **State Management**: Zustand — reaktywne zarządzanie parametrami symulacji i fazami.
 *   **Export**: Native Export Engine — autorski wzorzec generowania dokumentów PDF/PNG przez izolowany HTML/DOM (bypass dla asynchroniczności).
 *   **UX/UI**: Tailwind v4 + Framer Motion — kinetyczne liczniki i mikro-interakcje.
+*   **Wasm-React Bridge**: Agregacyjna optymalizacja payloadu statystycznego (percentyle P10/50/90 liczone po stronie Rust) dla płynnej wizualizacji probabilistycznej (Area Charts).

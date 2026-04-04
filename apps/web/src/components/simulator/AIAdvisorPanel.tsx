@@ -46,9 +46,11 @@ export function AIAdvisorPanel() {
                 Kinetic AI Advisor
               </h3>
               <p className={`text-[10px] font-label uppercase tracking-wider font-bold ${store.aiStatus === 'ready' ? 'text-secondary' : 'text-slate-500'}`}>
-                {store.aiStatus === 'idle' && 'Offline (Lokalny model Phi-3)'}
-                {store.aiStatus === 'loading' && `Pobieranie modelu: ${store.aiProgress}%`}
-                {store.aiStatus === 'ready' && 'Analityk Gotowy'}
+                {store.aiStatus === 'idle' && (
+                  (navigator as any).gpu ? 'Deep Tech Audit Ready' : 'Ready: Safe Engine (CPU)'
+                )}
+                {store.aiStatus === 'loading' && `Inicjalizacja: ${store.aiProgress}%`}
+                {store.aiStatus === 'ready' && (store.aiModel.includes('Phi-3') || store.aiModel.includes('Qwen') ? 'Analityk Turbo Aktywny (GPU)' : 'Tryb Kompatybilny Aktywny (CPU)')}
                 {store.aiStatus === 'generating' && 'Analiza portfela...'}
               </p>
             </div>
@@ -86,7 +88,9 @@ export function AIAdvisorPanel() {
                 />
               </div>
               <p className="text-center text-[10px] text-slate-500 dark:text-white/40 uppercase tracking-widest font-bold">
-                Pobieranie modelu Phi-4 (1.2 GB) do pamięci GPU... To potrwa chwilę.
+                {!!(navigator as any).gpu 
+                  ? 'Ładowanie modelu Qwen2 (350 MB) do pamięci GPU...' 
+                  : 'Ładowanie modelu TinyLlama (600 MB) do pamięci operacyjnej...'}
               </p>
             </motion.div>
           )}

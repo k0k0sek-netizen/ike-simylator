@@ -46,6 +46,7 @@ export interface SimulatorState {
   // --- AI Advisor State ---
   aiStatus: 'idle' | 'loading' | 'ready' | 'generating' | 'error';
   aiProgress: number;
+  aiModel: string;
   aiLastResponse: string | null;
   aiError: string | null;
 
@@ -77,6 +78,7 @@ export interface SimulatorState {
   calculateAIAdvice: () => Promise<void>;
   setAIStatus: (status: SimulatorState['aiStatus']) => void;
   setAIProgress: (progress: number) => void;
+  setAIModel: (model: string) => void;
 }
 
 export const useSimulatorStore = create<SimulatorState>()(
@@ -112,6 +114,7 @@ export const useSimulatorStore = create<SimulatorState>()(
 
       aiStatus: 'idle',
       aiProgress: 0,
+      aiModel: '',
       aiLastResponse: null,
       aiError: null,
 
@@ -233,6 +236,7 @@ export const useSimulatorStore = create<SimulatorState>()(
 
       setAIStatus: (status) => set({ aiStatus: status }),
       setAIProgress: (progress) => set({ aiProgress: progress }),
+      setAIModel: (model) => set({ aiModel: model }),
 
       initAI: async () => {
         const { initWebLLM } = await import('../lib/aiEngine');
@@ -261,7 +265,7 @@ export const useSimulatorStore = create<SimulatorState>()(
     {
       name: 'kinetic-oracle-storage',
       partialize: (state) => {
-        const { engineType, mcResult, aiStatus, aiProgress, aiLastResponse, aiError, ...rest } = state;
+        const { engineType, mcResult, aiStatus, aiProgress, aiModel, aiLastResponse, aiError, ...rest } = state;
         return rest;
       }
     }

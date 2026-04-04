@@ -2,8 +2,13 @@ import { CreateMLCEngine, MLCEngine } from "@mlc-ai/web-llm";
 import type { ChatCompletionRequest, InitProgressReport, ChatCompletion } from "@mlc-ai/web-llm";
 import { useSimulatorStore } from "../store/useSimulatorStore";
 
-const MODEL_ID = "Phi-3-mini-4k-instruct-q4f16_1-MLC";
+const MODELS = {
+  TURBO: "Qwen2-0.5B-Instruct-q4f16_1-MLC", 
+  SAFE: "TinyLlama-1.1B-Chat-v1.0-q4f32_1-MLC" // Gwarantowany publiczny model f32 (WASM friendly)
+};
+
 let engine: MLCEngine | null = null;
+let currentModelId = MODELS.TURBO;
 
 const SYSTEM_PROMPT = `
 Jesteś "Kinetic Advisor" — elitarnym doradcą finansowym zintegrowanym z systemem Kinetic Oracle. 
@@ -30,25 +35,60 @@ export async function initWebLLM() {
   try {
     store.setAIStatus('loading');
     
-    const progressCallback = (report: InitProgressReport) => {
-      console.log(`[WebLLM] Progress: ${report.text}`);
-      // Parsowanie postępu z tekstu (np. "Fetching model... 45%")
-      const match = report.text.match(/(\d+)%/);
-      if (match) {
-        store.setAIProgress(parseInt(match[1]));
+    // 1. Głęboki audyt wsparcia WebGPU
+    let gpuSupport = false;
+    let f16Support = false;
+    
+    try {
+      const navGpu = (navigator as any).gpu;
+      if (navGpu) {
+        const adapter = await navGpu.requestAdapter();
+        if (adapter) {
+          gpuSupport = true;
+          f16Support = adapter.features.has("shader-f16");
+        }
       }
+    } catch (e) {
+      console.warn("[WebLLM] Błąd podczas sprawdzania adaptera GPU:", e);
+    }
+    
+    // Decyzja: TURBO tylko jeśli mamy GPU ORAZ wsparcie f16
+    currentModelId = (gpuSupport && f16Support) ? MODELS.TURBO : MODELS.SAFE;
+    store.setAIModel(currentModelId);
+    
+    console.log(`[WebLLM] Sprzęt: GPU=${gpuSupport}, f16=${f16Support}. Wybieram: ${currentModelId}`);
+
+    const progressCallback = (report: InitProgressReport) => {
+      const match = report.text.match(/(\d+)%/);
+      if (match) store.setAIProgress(parseInt(match[1]));
     };
 
     engine = await CreateMLCEngine(
-      MODEL_ID,
-      { initProgressCallback: progressCallback }
+      currentModelId,
+      { 
+        initProgressCallback: progressCallback,
+        appConfig: {
+          model_list: [
+            {
+              model: "https://huggingface.co/mlc-ai/TinyLlama-1.1B-Chat-v1.0-q4f32_1-MLC",
+              model_id: MODELS.SAFE,
+              model_lib: "https://raw.githubusercontent.com/mlc-ai/binary-mlc-llm-libs/main/web-llm-models/v0_2_12/TinyLlama-1.1B-Chat-v1.0-q4f32_1-MLC-wasm64.wasm"
+            },
+            {
+              model: "https://huggingface.co/mlc-ai/Qwen2-0.5B-Instruct-q4f16_1-MLC",
+              model_id: MODELS.TURBO,
+              model_lib: "https://raw.githubusercontent.com/mlc-ai/binary-mlc-llm-libs/main/web-llm-models/v0_2_12/Qwen2-0.5B-Instruct-q4f16_1-MLC-webgpu.wasm"
+            }
+          ]
+        }
+      }
     );
 
     store.setAIStatus('ready');
   } catch (err: any) {
     console.error("[WebLLM] Init Error:", err);
     store.setAIStatus('error');
-    throw new Error(`Błąd inicjalizacji WebGPU/WebLLM: ${err.message}`);
+    // Nie rzucamy błędu wyżej, aby nie blokować UI
   }
 }
 
