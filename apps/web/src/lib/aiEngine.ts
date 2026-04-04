@@ -65,7 +65,13 @@ export async function initWebLLM() {
 
     engine = await CreateMLCEngine(
       currentModelId,
-      { initProgressCallback: progressCallback }
+      { 
+        initProgressCallback: progressCallback,
+        // @ts-ignore - Wymuszamy wybór dedykowanej karty graficznej (high-performance)
+        engineConfig: {
+          requestAdapterOptions: { powerPreference: "high-performance" }
+        }
+      }
     );
 
     store.setAIStatus('ready');
