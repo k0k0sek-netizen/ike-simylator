@@ -21,10 +21,10 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
         height: chartContainerRef.current.clientHeight,
         rightPriceScale: { 
           borderVisible: false, 
-          visible: true,      // Włącz skale cenowe na osi Y
+          visible: true,      // Skala osi Y
           autoScale: true,
           scaleMargins: {
-            top: 0.2,         // Margines z góry, żeby tooltipy się nie ucinały
+            top: 0.4,         // Zabezpieczenie przed "zgnieceniem" mediamy przez wysokie P90
             bottom: 0.1,
           }
         },
@@ -41,6 +41,7 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
         topColor: 'rgba(183, 33, 255, 0.4)',
         bottomColor: 'rgba(183, 33, 255, 0.05)',
         lineWidth: 2,
+        lastValueVisible: true, // Zostawiamy tę etykietę jako główny wynik portfela
         priceFormat: { type: 'volume' }
       });
       
@@ -49,6 +50,7 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
         topColor: 'rgba(78, 222, 163, 0.5)',
         bottomColor: 'rgba(78, 222, 163, 0.1)',
         lineWidth: 2,
+        lastValueVisible: false, // Ukrywamy, aby nie nakładało się na Tarczę IKE
         priceFormat: { type: 'volume' }
       });
       
@@ -57,37 +59,124 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
         topColor: 'rgba(100, 116, 139, 0.3)',
         bottomColor: 'rgba(100, 116, 139, 0.05)',
         lineWidth: 2,
+        lastValueVisible: false, // Sam kapitał nie musi mieć etykiety na osi Y
       });
 
-      // --- Monte Carlo Series ---
-      const mcAreaSeries = chart.addSeries(AreaSeries, {
-        lineColor: 'rgba(78, 222, 163, 0.2)',
-        topColor: 'rgba(78, 222, 163, 0.2)',
-        bottomColor: 'rgba(78, 222, 163, 0.05)',
+      // --- Seria Monte Carlo (Lejek Prawdopodobieństwa - Subtelne Tło) ---
+      const mcUpperSeries = chart.addSeries(LineSeries, {
+        color: 'rgba(78, 222, 163, 0.15)', // Bardzo niskie krycie dla tła
         lineWidth: 1,
         lineStyle: LineStyle.Dashed,
+        lastValueVisible: false,           // Ukrywamy wartość na osi Y
         priceFormat: { type: 'volume' },
-        visible: true,
       });
 
-      const mcMedianSeries = chart.addSeries(LineSeries, {
-        color: 'rgba(78, 222, 163, 0.8)',
-        lineWidth: 2,
+      const mcLowerSeries = chart.addSeries(LineSeries, {
+        color: 'rgba(78, 222, 163, 0.15)',
+        lineWidth: 1,
         lineStyle: LineStyle.Dashed,
+        lastValueVisible: false,
         priceFormat: { type: 'volume' },
       });
 
-      chartRef.current = { chart, taxShieldSeries, netProfitSeries, baseSeries, mcAreaSeries, mcMedianSeries };
+      const mcMedianSeries = chart.addSeries(AreaSeries, {
+        lineColor: 'rgba(78, 222, 163, 0.3)',
+        topColor: 'rgba(78, 222, 163, 0.15)',
+        bottomColor: 'rgba(78, 222, 163, 0.05)',
+        lineWidth: 2,
+        lineStyle: LineStyle.Solid,
+        lastValueVisible: false,
+        priceFormat: { type: 'volume' },
+      });
+
+      chartRef.current = { 
+        chart, 
+        taxShieldSeries, 
+        netProfitSeries, 
+        baseSeries, 
+        mcUpperSeries, 
+        mcLowerSeries, 
+        mcMedianSeries 
+      };
+
+      // --- Obsługa Tooltipa (Floating UI) ---
+      const container = chartContainerRef.current;
+      const tooltip = document.createElement('div');
+      tooltip.style.display = 'none';
+      tooltip.style.position = 'absolute';
+      tooltip.style.zIndex = '50'; // Standardowy wysoki z-index wewnątrz kontekstu z-30 kontenera
+      tooltip.style.pointerEvents = 'none';
+      container.appendChild(tooltip);
+
+      chart.subscribeCrosshairMove((param) => {
+        if (!param.time || param.point === undefined || !param.point.x || !param.point.y) {
+          tooltip.style.display = 'none';
+          return;
+        }
+
+        const dateStr = param.time as string;
+        const data = param.seriesData;
+        
+        const vTarcza = (data.get(taxShieldSeries) as any)?.value || 0;
+        const vZysk = (data.get(netProfitSeries) as any)?.value || 0;
+        const vKapital = (data.get(baseSeries) as any)?.value || 0;
+        const vP90 = (data.get(mcUpperSeries) as any)?.value || 0;
+        const vP10 = (data.get(mcLowerSeries) as any)?.value || 0;
+        const vP50 = (data.get(mcMedianSeries) as any)?.value || 0;
+
+        tooltip.style.display = 'block';
+        tooltip.innerHTML = `
+          <div class="backdrop-blur-xl bg-black/80 p-3 rounded-xl border border-white/20 shadow-2xl text-[11px] min-w-[180px]">
+            <div class="text-white/60 mb-2 font-bold tracking-tighter uppercase">${dateStr.split('-')[0]} rok</div>
+            <div class="space-y-1">
+              <div class="flex justify-between items-center text-[#b721ff] font-black">
+                <span>TARCZA IKE:</span>
+                <span>${vTarcza.toLocaleString()} zł</span>
+              </div>
+              <div class="flex justify-between items-center text-secondary">
+                <span>ZYSK NETTO:</span>
+                <span>${vZysk.toLocaleString()} zł</span>
+              </div>
+              <div class="flex justify-between items-center text-slate-400">
+                <span>KAPITAŁ:</span>
+                <span>${vKapital.toLocaleString()} zł</span>
+              </div>
+              <div class="h-px bg-white/10 my-1"></div>
+              <div class="flex justify-between items-center text-secondary/60 text-[9px]">
+                <span>P90 (OPT):</span>
+                <span>${vP90.toLocaleString()} zł</span>
+              </div>
+              <div class="flex justify-between items-center text-secondary/60 text-[9px]">
+                <span>P50 (MED):</span>
+                <span>${vP50.toLocaleString()} zł</span>
+              </div>
+              <div class="flex justify-between items-center text-secondary/60 text-[9px]">
+                <span>P10 (PES):</span>
+                <span>${vP10.toLocaleString()} zł</span>
+              </div>
+            </div>
+          </div>
+        `;
+
+        const y = param.point.y;
+        const left = param.point.x + 20;
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${y}px`;
+      });
 
       const handleResize = () => {
-        if(chartContainerRef.current && chartRef.current) {
-            chartRef.current.chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+        if (chartContainerRef.current && chartRef.current) {
+          chartRef.current.chart.applyOptions({ 
+            width: chartContainerRef.current.clientWidth,
+            height: chartContainerRef.current.clientHeight 
+          });
         }
       };
       window.addEventListener('resize', handleResize);
 
       return () => {
         window.removeEventListener('resize', handleResize);
+        container.removeChild(tooltip);
         chart.remove();
       };
     }
@@ -96,7 +185,14 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
   useEffect(() => {
     const store = useSimulatorStore.getState();
     if (chartRef.current && activeScenario) {
-      const { taxShieldSeries, netProfitSeries, baseSeries, mcAreaSeries, mcMedianSeries } = chartRef.current;
+      const { 
+        taxShieldSeries, 
+        netProfitSeries, 
+        baseSeries, 
+        mcUpperSeries, 
+        mcLowerSeries, 
+        mcMedianSeries 
+      } = chartRef.current;
       const currentYear = new Date().getFullYear();
       const mcResult = store.mcResult;
       
@@ -119,28 +215,40 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
       netProfitSeries.setData(netProfitData);
       baseSeries.setData(baseData);
 
-      // --- Monte Carlo Data Processing ---
+      // --- Przetwarzanie i wizualizacja danych Monte Carlo ---
       if (mcResult && mcResult.points) {
         const years = activeScenario.yearlyData.map((d: any) => d.year);
         const startYearOffset = years[0];
         const endYearOffset = years[years.length - 1];
 
-        const filteredMcPoints = mcResult.points.filter((p: any) => p.year >= startYearOffset && p.year <= endYearOffset);
+        // Filtrowanie punktów MC dopasowane do aktualnej osi czasu scenariusza
+        const filteredMcPoints = mcResult.points.filter((p: any) => 
+          p.year >= startYearOffset && p.year <= endYearOffset
+        );
 
-        const mcAreaData = filteredMcPoints.map((p: any) => ({
+        // Mapowanie punktów na format Lightweight Charts
+        const mcUpperData = filteredMcPoints.map((p: any) => ({
           time: `${currentYear + p.year}-01-01`,
-          value: p.p90 // Górna granica lejka
+          value: p.p90
+        }));
+
+        const mcLowerData = filteredMcPoints.map((p: any) => ({
+          time: `${currentYear + p.year}-01-01`,
+          value: p.p10
         }));
 
         const mcMedianData = filteredMcPoints.map((p: any) => ({
           time: `${currentYear + p.year}-01-01`,
-          value: p.p50 // Mediana
+          value: p.p50
         }));
 
-        mcAreaSeries.setData(mcAreaData);
+        mcUpperSeries.setData(mcUpperData);
+        mcLowerSeries.setData(mcLowerData);
         mcMedianSeries.setData(mcMedianData);
       } else {
-        mcAreaSeries.setData([]);
+        // Czyścimy serie jeśli brak danych MC
+        mcUpperSeries.setData([]);
+        mcLowerSeries.setData([]);
         mcMedianSeries.setData([]);
       }
 
@@ -149,27 +257,34 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
   }, [activeScenario]);
 
   return (
-    <section className="relative w-full aspect-video bg-surface-container-lowest rounded-2xl group hover:shadow-[0_0_30px_rgba(78,222,163,0.1)] transition-all duration-500" style={{ viewTransitionName: 'main-chart' }}>
-      <div className="absolute inset-0 bg-linear-to-t from-secondary/5 to-transparent rounded-2xl pointer-events-none"></div>
-      
-      <div ref={chartContainerRef} className="absolute inset-0 w-full h-full p-4 drop-shadow-[0_0_15px_rgba(78,222,163,0.3)]" style={{ zIndex: 1 }} />
-      
-      <div className="absolute bottom-4 left-4 flex gap-4" style={{ zIndex: 2 }}>
-        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-black/20 px-2 py-1 rounded-full border border-slate-200 dark:border-transparent">
-          <span className="w-2 h-2 rounded-full bg-[#b721ff] shadow-[0_0_5px_#b721ff]"></span>
-          <span className="text-[10px] font-label text-slate-900 dark:text-white tracking-widest uppercase font-bold">Tarcza IKE</span>
+    <section className="flex flex-col gap-4 mt-8 mb-4">
+      {/* Kontener wykresu z wymuszonym kontekstem warstw z-[30], aby Tooltip był nad legendą */}
+      <div className="relative z-[30] w-full h-[400px] bg-surface-container-lowest rounded-2xl group hover:shadow-[0_0_30px_rgba(78,222,163,0.05)] transition-all duration-500" style={{ viewTransitionName: 'main-chart' }}>
+        <div className="absolute inset-0 bg-linear-to-t from-secondary/5 to-transparent rounded-2xl pointer-events-none"></div>
+        <div ref={chartContainerRef} className="absolute inset-0 w-full h-full" />
+      </div>
+
+      {/* Legenda z niższym kontekstem relative z-10, aby ustąpić miejsca dymkom wykresu */}
+      <div className="relative z-10 flex flex-wrap gap-4 px-2 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#b721ff] shadow-[0_0_8px_#b721ff]"></span>
+          <span className="text-[10px] font-label text-slate-900 dark:text-white/80 tracking-widest uppercase font-black">Tarcza IKE</span>
         </div>
-        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-black/20 px-2 py-1 rounded-full border border-slate-200 dark:border-transparent">
-          <span className="w-2 h-2 rounded-full bg-secondary shadow-[0_0_5px_#4edea3]"></span>
-          <span className="text-[10px] font-label text-slate-900 dark:text-white tracking-widest uppercase font-bold">Zysk Netto</span>
+        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
+          <span className="w-2.5 h-2.5 rounded-full bg-secondary shadow-[0_0_8px_#4edea3]"></span>
+          <span className="text-[10px] font-label text-slate-900 dark:text-white/80 tracking-widest uppercase font-black">Zysk Netto</span>
         </div>
-        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-black/20 px-2 py-1 rounded-full border border-slate-200 dark:border-transparent">
-          <span className="w-2 h-2 rounded-full bg-slate-500 shadow-[0_0_5px_#64748b]"></span>
-          <span className="text-[10px] font-label text-slate-900 dark:text-white tracking-widest uppercase font-bold">Wpłacony Kapitał</span>
+        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
+          <span className="w-2.5 h-2.5 rounded-full bg-slate-500 shadow-[0_0_8px_#64748b]"></span>
+          <span className="text-[10px] font-label text-slate-900 dark:text-white/80 tracking-widest uppercase font-black">Wpłacony Kapitał</span>
         </div>
-        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-black/20 px-2 py-1 rounded-full border border-slate-200 dark:border-transparent">
-          <span className="w-2 h-2 rounded-full border border-primary border-dashed shadow-[0_0_5px_#4edea3]"></span>
-          <span className="text-[10px] font-label text-slate-900 dark:text-white tracking-widest uppercase font-bold">Lejek Ryzyka (Monte Carlo)</span>
+        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
+          <span className="w-2.5 h-2.5 rounded-full border-2 border-secondary/40 border-dashed"></span>
+          <span className="text-[10px] font-label text-slate-900 dark:text-white/80 tracking-widest uppercase font-black">Zakres P10-P90</span>
+        </div>
+        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
+          <span className="w-2.5 h-2.5 rounded-full bg-secondary/30 border border-secondary/50"></span>
+          <span className="text-[10px] font-label text-slate-900 dark:text-white/80 tracking-widest uppercase font-black">Mediana MC</span>
         </div>
       </div>
     </section>
