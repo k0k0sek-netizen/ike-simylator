@@ -13,7 +13,7 @@ export function StatSummary({ activeScenario, phase }: StatSummaryProps) {
   
   // Wartości w momencie przejścia na emeryturę (szczyt akumulacji)
   const retirementData = activeScenario?.yearlyData?.find((d: any) => d.year === years);
-  const capitalAtRetirement = retirementData ? retirementData.nominalBalance : (activeScenario ? activeScenario.finalNominal : 0);
+  const capitalAtRetirement = retirementData ? retirementData.nominalBalance : 0;
   
   // Zysk procentowy na moment emerytury
   const investedAtRetirement = retirementData ? retirementData.totalInvestedNominal : (activeScenario ? activeScenario.totalInvestedNominal : 0);

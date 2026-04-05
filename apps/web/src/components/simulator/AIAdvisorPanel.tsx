@@ -69,51 +69,44 @@ export function AIAdvisorPanel() {
 
         {/* AI Response Area */}
         <AnimatePresence mode="wait">
-          {/* Sekcja ładowania (pobierania modelu) została usunięta - Groq jest natychmiastowy */}
-
-          {store.aiStatus === 'generating' && (
-            <motion.div 
-              key="generating-ai"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex flex-col gap-3 py-4"
-            >
-              <div className="flex gap-2 items-center">
-                <div className="w-2 h-2 rounded-full bg-primary animate-bounce shadow-sm"></div>
-                <div className="w-2 h-2 rounded-full bg-primary animate-bounce delay-100 shadow-sm"></div>
-                <div className="w-2 h-2 rounded-full bg-primary animate-bounce delay-200 shadow-sm"></div>
-                <p className="text-xs font-body italic text-slate-500 ml-2">Konsultacja z Wyrocznią chmurową...</p>
+          <motion.div
+            key={`${store.aiStatus}-${store.activePhase}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+          >
+            {store.aiStatus === 'generating' ? (
+              <div className="flex flex-col gap-3 py-4">
+                <div className="flex gap-2 items-center">
+                  <div className="w-2 h-2 rounded-full bg-primary animate-bounce shadow-sm"></div>
+                  <div className="w-2 h-2 rounded-full bg-primary animate-bounce delay-100 shadow-sm"></div>
+                  <div className="w-2 h-2 rounded-full bg-primary animate-bounce delay-200 shadow-sm"></div>
+                  <p className="text-xs font-body italic text-slate-500 ml-2">Konsultacja z Wyrocznią chmurową...</p>
+                </div>
               </div>
-            </motion.div>
-          )}
-
-          {store.aiLastResponse && (
-            <motion.div 
-              key="response-ai"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="relative p-5 rounded-2xl bg-secondary/5 border border-secondary/20 shadow-inner group"
-            >
-              <div className="absolute top-2 right-4 text-[10px] font-black uppercase text-secondary/40 tracking-widest pointer-events-none">
-                AI ANALYTICS - LLAMA 3.3 70B
+            ) : store.aiStatus === 'error' ? (
+              <div className="p-4 rounded-xl bg-error/10 border border-error/30 flex items-center gap-3">
+                <span className="material-symbols-outlined text-error">warning</span>
+                <p className="text-xs text-error font-bold uppercase tracking-wider">{store.aiError || 'Błąd komunikacji z chmurą'}</p>
               </div>
-              
-              <div className="prose prose-invert prose-sm max-w-none prose-headings:font-headline prose-p:font-body prose-p:leading-relaxed text-slate-700 dark:text-slate-200">
-                <div dangerouslySetInnerHTML={{ __html: store.aiLastResponse.replace(/\n/g, '<br/>') }} />
+            ) : store.aiLastResponse ? (
+              <div className="relative p-5 rounded-2xl bg-secondary/5 border border-secondary/20 shadow-inner group">
+                <div className="absolute top-2 right-4 text-[10px] font-black uppercase text-secondary/40 tracking-widest pointer-events-none">
+                  AI ANALYTICS - LLAMA 3.1 70B
+                </div>
+                
+                <div className="prose prose-invert prose-sm max-w-none prose-headings:font-headline prose-p:font-body prose-p:leading-relaxed text-slate-700 dark:text-slate-200">
+                  <div dangerouslySetInnerHTML={{ __html: store.aiLastResponse.replace(/\n/g, '<br/>') }} />
+                </div>
+                <div ref={chatEndRef} />
               </div>
-              <div ref={chatEndRef} />
-            </motion.div>
-          )}
-
-          {store.aiStatus === 'error' && (
-            <motion.div 
-              key="error-ai"
-              className="p-4 rounded-xl bg-error/10 border border-error/30 flex items-center gap-3"
-            >
-              <span className="material-symbols-outlined text-error">warning</span>
-              <p className="text-xs text-error font-bold uppercase tracking-wider">{store.aiError || 'Błąd komunikacji z chmurą'}</p>
-            </motion.div>
-          )}
+            ) : (
+              <div className="py-8 text-center border-2 border-dashed border-slate-200 dark:border-white/5 rounded-2xl">
+                <p className="text-[10px] font-label uppercase tracking-widest text-slate-400">Brak aktywnej analizy. Kliknij przycisk powyżej.</p>
+              </div>
+            )}
+          </motion.div>
         </AnimatePresence>
 
         {/* Nota o prywatności i przetwarzaniu w chmurze */}

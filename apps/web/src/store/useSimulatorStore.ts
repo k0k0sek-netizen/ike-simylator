@@ -207,8 +207,8 @@ export const useSimulatorStore = create<SimulatorState>()(
             isCoreIke: state.isCoreIke,
             isSatIke: state.isSatIke,
             isBondsIke: state.isBondsIke,
-            monthlyWithdrawal: state.monthlyWithdrawal,
-            withdrawalYears: state.withdrawalYears,
+            monthlyWithdrawal: state.activePhase === 'accumulation' ? 0 : state.monthlyWithdrawal,
+            withdrawalYears: state.activePhase === 'accumulation' ? 0 : state.withdrawalYears,
             coreVolatility: state.coreVolatility,
             satVolatility: state.satVolatility,
             bondsVolatility: state.bondsVolatility,
@@ -219,10 +219,18 @@ export const useSimulatorStore = create<SimulatorState>()(
           // @ts-ignore
           const result = await engine.generateMonteCarloData(params, state.customCoreWeight, state.customSatWeight);
           
+          // --- Twarda Izolacja Stanu (Hard State Isolation) ---
+          // Jeśli jesteśmy w fazie akumulacji, interesuje nas wyłącznie szansa na zebranie kapitału.
+          // Jeśli w fazie dekumulacji, interesuje nas szansa na przeżycie portfela (niezależna od fazy 1).
           if (state.activePhase === 'accumulation') {
-            set({ mcResultAccumulation: result });
+            set({ 
+              mcResultAccumulation: result,
+              // Nie czyścimy dekumulacji, ale zaznaczamy, że jest nieaktualna
+            });
           } else {
-            set({ mcResultDecumulation: result });
+            set({ 
+              mcResultDecumulation: result,
+            });
           }
           
           // Automatyczne odświeżenie porady AI po przeliczeniu Monte Carlo, jeśli AI jest gotowe
@@ -263,7 +271,7 @@ export const useSimulatorStore = create<SimulatorState>()(
           const { getGroqAIAdvice } = await import('../lib/groqService');
           const { exportSimulationContext } = await import('../utils/contextExporter');
           
-          const context = exportSimulationContext(state);
+          const context = exportSimulationContext();
           const advice = await getGroqAIAdvice(context);
           
           set({ aiLastResponse: advice, aiStatus: 'ready' });

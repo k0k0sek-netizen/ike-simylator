@@ -245,8 +245,18 @@ export default function App() {
           )}
         </AnimatePresence>
 
-        {/* === STAT SUMMARY (kontekstowy) === */}
-        <StatSummary key={store.activePhase} activeScenario={activeScenario} phase={store.activePhase} />
+        {/* === STAT SUMMARY & PHASE CONTENT === */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={store.activePhase}
+            initial={{ opacity: 0, x: isAccumulation ? -20 : 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: isAccumulation ? 20 : -20 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+          >
+            <StatSummary activeScenario={activeScenario} phase={store.activePhase} />
+          </motion.div>
+        </AnimatePresence>
         
         {/* === EXPORT MENU (PDF/PNG) === */}
         <ExportMenu 

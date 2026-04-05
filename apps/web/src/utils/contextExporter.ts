@@ -1,10 +1,13 @@
-import type { SimulatorState } from '../store/useSimulatorStore';
+import { useSimulatorStore } from '../store/useSimulatorStore';
 
 /**
  * Przekształca stan symulacji na skondensowany kontekst tekstowy dla LLM.
  * Pozwala doradcy AI na "zrozumienie" konkretnej sytuacji finansowej użytkownika.
  */
-export function exportSimulationContext(state: SimulatorState): string {
+export function exportSimulationContext(): string {
+  // Pobieramy świeży, aktualny stan bezpośrednio ze Store, aby uniknąć problemu "stale closure"
+  const state = useSimulatorStore.getState();
+  
   const {
     monthlyContribution,
     currentAge,
@@ -16,9 +19,6 @@ export function exportSimulationContext(state: SimulatorState): string {
     isCoreIke,
     isSatIke,
     isBondsIke,
-    coreVolatility,
-    satVolatility,
-    bondsVolatility,
     rebalancingStrategy,
     mcResultAccumulation,
     mcResultDecumulation,
@@ -34,10 +34,10 @@ export function exportSimulationContext(state: SimulatorState): string {
 Użytkownik: Wiek ${currentAge} lat, planowana emerytura w wieku ${retirementAge} lat (Horyzont: ${horizon} lat).
 Budowa kapitału: Wpłata ${monthlyContribution} PLN/mc, wzrost wpłaty o inflację (${inflationRate}%).
 
-ALOKACJA PORTFELA:
-- Akcje Świat (CORE): ${customCoreWeight}% (IKE: ${isCoreIke ? 'Włączone' : 'Wyłączone - Podatek Belki'}) | Zmienność: ${coreVolatility}%
-- Kryptowaluty (SAT): ${customSatWeight}% (IKE: ${isSatIke ? 'Włączone' : 'Wyłączone - Podatek Belki'}) | Zmienność: ${satVolatility}%
-- Obligacje EDO (Bonds): ${customBondsWeight}% (IKE: ${isBondsIke ? 'Włączone' : 'Wyłączone - Podatek Belki'}) | Zmienność: ${bondsVolatility}%
+ALOKACJA PORTFELA (BARDZO WAŻNE):
+- Akcje Świat: ${customCoreWeight}% | STATUS TARCZY: ${isCoreIke ? 'IKE WŁĄCZONE (0% PODATKU)' : 'BRAK IKE (19% PODATKU BELKI)'}
+- Kryptowaluty: ${customSatWeight}% | STATUS TARCZY: ${isSatIke ? 'IKE WŁĄCZONE (0% PODATKU)' : 'BRAK IKE (19% PODATKU BELKI)'}
+- Obligacje EDO: ${customBondsWeight}% | STATUS TARCZY: ${isBondsIke ? 'IKE WŁĄCZONE (0% PODATKU)' : 'BRAK IKE (19% PODATKU BELKI)'}
 
 STRATEGIA: ${strategyName}
 
@@ -45,17 +45,22 @@ FAZA WYPŁAT:
 Planowana wypłata: ${monthlyWithdrawal} PLN/mc (w dzisiejszej sile nabywczej) przez ${withdrawalYears} lat.
 `;
 
-  const activeMcResult = activePhase === 'accumulation' ? mcResultAccumulation : mcResultDecumulation;
+  // TWARDY RESET IZOLACJI - rygorystyczny wybór slotu
+  const activeMcResult = activePhase === 'decumulation' ? mcResultDecumulation : mcResultAccumulation;
 
-  if (activeMcResult) {
-    const finalP50 = activeMcResult.points[activeMcResult.points.length - 1]?.p50 || 0;
+  if (activeMcResult && activeMcResult.points && activeMcResult.points.length > 0) {
+    const lastPoint = activeMcResult.points[activeMcResult.points.length - 1];
+    const finalP50 = lastPoint.p50;
+    const targetYear = lastPoint.year;
+    
     context += `
-WYNIKI SYMULACJI (MONTE CARLO - 1000 iteracji) dla fazy ${activePhase === 'accumulation' ? 'BUDOWY' : 'WYPŁAT'}:
-- Szansa na sukces (kapitał nie spadł do zera): ${Math.round(activeMcResult.successRate * 100)}%
-- Prognozowany kapitał (Mediana P50): ${new Intl.NumberFormat('pl-PL').format(Math.round(finalP50))} PLN
+WYNIKI SYMULACJI (MONTE CARLO) DLA FAZY ${activePhase === 'accumulation' ? 'BUDOWY' : 'WYPŁAT'}:
+- Horyzont obliczeń: do roku ${targetYear} (${targetYear - currentAge} lat od teraz)
+- Szansa na sukces (kapitał > 0): ${Math.round(activeMcResult.successRate * 100)}%
+- Przewidywana MEDIANA kapitału na koniec okresu (P50): ${new Intl.NumberFormat('pl-PL').format(Math.round(finalP50))} PLN
 `;
   } else {
-    context += `\n(Brak wyników Monte Carlo - użytkownik jeszcze nie przeliczył symulacji lub trwa obliczanie.)`;
+    context += `\n(Brak aktualnych wyników Monte Carlo dla fazy ${activePhase}.)`;
   }
 
   context += `\n-----------------------------------`;

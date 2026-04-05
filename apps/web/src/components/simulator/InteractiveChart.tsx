@@ -259,8 +259,8 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
 
   return (
     <section className="flex flex-col gap-4 mt-8 mb-4">
-      {/* Kontener wykresu z wymuszonym kontekstem warstw z-[30], aby Tooltip był nad legendą */}
-      <div className="relative z-[30] w-full h-[400px] bg-surface-container-lowest rounded-2xl group hover:shadow-[0_0_30px_rgba(78,222,163,0.05)] transition-all duration-500" style={{ viewTransitionName: 'main-chart' }}>
+      {/* Kontener wykresu z wymuszonym kontekstem warstw z-30, aby Tooltip był nad legendą */}
+      <div className="relative z-30 w-full h-[400px] bg-surface-container-lowest rounded-2xl group hover:shadow-[0_0_30px_rgba(78,222,163,0.05)] transition-all duration-500" style={{ viewTransitionName: 'main-chart' }}>
         <div className="absolute inset-0 bg-linear-to-t from-secondary/5 to-transparent rounded-2xl pointer-events-none"></div>
         <div ref={chartContainerRef} className="absolute inset-0 w-full h-full" />
       </div>
