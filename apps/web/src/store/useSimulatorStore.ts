@@ -41,7 +41,8 @@ export interface SimulatorState {
   satVolatility: number;
   bondsVolatility: number;
   rebalancingStrategy: number; // 0: None, 1: Annual
-  mcResult: MonteCarloSummary | null;
+  mcResultAccumulation: MonteCarloSummary | null;
+  mcResultDecumulation: MonteCarloSummary | null;
 
   // --- Stan Doradcy AI ---
   aiStatus: 'idle' | 'ready' | 'generating' | 'error';
@@ -106,7 +107,8 @@ export const useSimulatorStore = create<SimulatorState>()(
       satVolatility: 60,
       bondsVolatility: 3,
       rebalancingStrategy: 1,
-      mcResult: null,
+      mcResultAccumulation: null,
+      mcResultDecumulation: null,
 
       aiStatus: 'idle',
       aiLastResponse: null,
@@ -216,7 +218,12 @@ export const useSimulatorStore = create<SimulatorState>()(
 
           // @ts-ignore
           const result = await engine.generateMonteCarloData(params, state.customCoreWeight, state.customSatWeight);
-          set({ mcResult: result });
+          
+          if (state.activePhase === 'accumulation') {
+            set({ mcResultAccumulation: result });
+          } else {
+            set({ mcResultDecumulation: result });
+          }
           
           // Automatyczne odświeżenie porady AI po przeliczeniu Monte Carlo, jeśli AI jest gotowe
           const currentState = get();
@@ -268,7 +275,7 @@ export const useSimulatorStore = create<SimulatorState>()(
     {
       name: 'kinetic-oracle-storage',
       partialize: (state) => {
-        const { engineType, mcResult, aiStatus, aiLastResponse, aiError, ...rest } = state;
+        const { engineType, mcResultAccumulation, mcResultDecumulation, aiStatus, aiLastResponse, aiError, ...rest } = state;
         return rest;
       }
     }

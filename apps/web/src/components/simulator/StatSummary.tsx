@@ -62,15 +62,23 @@ export function StatSummary({ activeScenario, phase }: StatSummaryProps) {
           </div>
 
           {/* Monte Carlo Success Rate Badge */}
-          {store.mcResult && (
+          {phase === 'accumulation' && store.mcResultAccumulation && typeof store.mcResultAccumulation.successRate === 'number' && (
             <div className="flex items-center gap-2 mt-1">
-              <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-black uppercase tracking-widest ${
-                store.mcResult.successRate >= 90 ? 'bg-secondary/10 border-secondary/30 text-secondary' :
-                store.mcResult.successRate >= 75 ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' :
+              <div className={`relative overflow-hidden flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${
+                store.mcResultAccumulation.successRate >= 0.9 ? 'bg-secondary/10 border-secondary/30 text-secondary' :
+                store.mcResultAccumulation.successRate >= 0.75 ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' :
                 'bg-error/10 border-error/30 text-error'
               }`}>
-                <span className="material-symbols-outlined text-xs">psychology</span>
-                Prawdopodobieństwo Sukcesu: {Math.round(store.mcResult.successRate)}%
+                {/* Visual Progress Bar in Badge Background */}
+                <div 
+                  className="absolute top-0 left-0 h-full bg-current opacity-[0.08] transition-all duration-1000 ease-out"
+                  style={{ width: `${Math.round(store.mcResultAccumulation.successRate * 100)}%` }}
+                />
+                
+                <span className="material-symbols-outlined text-xs relative z-10">psychology</span>
+                <span className="relative z-10">
+                  Prawdopodobieństwo Sukcesu: {Math.round(store.mcResultAccumulation.successRate * 100)}%
+                </span>
               </div>
             </div>
           )}
@@ -214,13 +222,19 @@ export function StatSummary({ activeScenario, phase }: StatSummaryProps) {
           </span>
           
           {/* Success Rate in Decumulation */}
-          {store.mcResult && (
-            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest ml-4 ${
-              store.mcResult.successRate >= 90 ? 'bg-secondary/10 border-secondary/30 text-secondary shadow-[0_0_15px_rgba(78,222,163,0.1)]' :
-              store.mcResult.successRate >= 75 ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' :
+          {phase === 'decumulation' && store.mcResultDecumulation && typeof store.mcResultDecumulation.successRate === 'number' && (
+            <div className={`relative overflow-hidden flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest ml-4 transition-all duration-300 ${
+              store.mcResultDecumulation.successRate >= 0.9 ? 'bg-secondary/10 border-secondary/30 text-secondary shadow-[0_0_15px_rgba(78,222,163,0.1)]' :
+              store.mcResultDecumulation.successRate >= 0.75 ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' :
               'bg-error/10 border-error/30 text-error animate-pulse'
             }`}>
-              Szansa na sukces: {Math.round(store.mcResult.successRate)}%
+              {/* Visual Progress Bar in Badge Background */}
+              <div 
+                className="absolute top-0 left-0 h-full bg-current opacity-[0.08] transition-all duration-1000 ease-out"
+                style={{ width: `${Math.round(store.mcResultDecumulation.successRate * 100)}%` }}
+              />
+              
+              <span className="relative z-10">Szansa na sukces: {Math.round(store.mcResultDecumulation.successRate * 100)}%</span>
             </div>
           )}
         </div>

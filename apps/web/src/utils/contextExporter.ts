@@ -20,7 +20,9 @@ export function exportSimulationContext(state: SimulatorState): string {
     satVolatility,
     bondsVolatility,
     rebalancingStrategy,
-    mcResult,
+    mcResultAccumulation,
+    mcResultDecumulation,
+    activePhase,
     monthlyWithdrawal,
     withdrawalYears
   } = state;
@@ -33,9 +35,9 @@ Użytkownik: Wiek ${currentAge} lat, planowana emerytura w wieku ${retirementAge
 Budowa kapitału: Wpłata ${monthlyContribution} PLN/mc, wzrost wpłaty o inflację (${inflationRate}%).
 
 ALOKACJA PORTFELA:
-1. AKCJE ŚWIAT (CORE): ${customCoreWeight}% | Zmienność: ${coreVolatility}% | IKE: ${isCoreIke ? 'TAK' : 'NIE (Konto Belka)'}
-2. KRYPTOWALUTY (SAT): ${customSatWeight}% | Zmienność: ${satVolatility}% | IKE: ${isSatIke ? 'TAK' : 'NIE (Konto Belka)'}
-3. OBLIGACJE/EDO: ${customBondsWeight}% | Zmienność: ${bondsVolatility}% | IKE: ${isBondsIke ? 'TAK' : 'NIE (Konto Belka)'}
+- Akcje Świat (CORE): ${customCoreWeight}% (IKE: ${isCoreIke ? 'Włączone' : 'Wyłączone - Podatek Belki'}) | Zmienność: ${coreVolatility}%
+- Kryptowaluty (SAT): ${customSatWeight}% (IKE: ${isSatIke ? 'Włączone' : 'Wyłączone - Podatek Belki'}) | Zmienność: ${satVolatility}%
+- Obligacje EDO (Bonds): ${customBondsWeight}% (IKE: ${isBondsIke ? 'Włączone' : 'Wyłączone - Podatek Belki'}) | Zmienność: ${bondsVolatility}%
 
 STRATEGIA: ${strategyName}
 
@@ -43,11 +45,13 @@ FAZA WYPŁAT:
 Planowana wypłata: ${monthlyWithdrawal} PLN/mc (w dzisiejszej sile nabywczej) przez ${withdrawalYears} lat.
 `;
 
-  if (mcResult) {
-    const finalP50 = mcResult.points[mcResult.points.length - 1]?.p50 || 0;
+  const activeMcResult = activePhase === 'accumulation' ? mcResultAccumulation : mcResultDecumulation;
+
+  if (activeMcResult) {
+    const finalP50 = activeMcResult.points[activeMcResult.points.length - 1]?.p50 || 0;
     context += `
-WYNIKI SYMULACJI (MONTE CARLO - 1000 iteracji):
-- Szansa na sukces (kapitał nie spadł do zera): ${Math.round(mcResult.successRate)}%
+WYNIKI SYMULACJI (MONTE CARLO - 1000 iteracji) dla fazy ${activePhase === 'accumulation' ? 'BUDOWY' : 'WYPŁAT'}:
+- Szansa na sukces (kapitał nie spadł do zera): ${Math.round(activeMcResult.successRate * 100)}%
 - Prognozowany kapitał (Mediana P50): ${new Intl.NumberFormat('pl-PL').format(Math.round(finalP50))} PLN
 `;
   } else {

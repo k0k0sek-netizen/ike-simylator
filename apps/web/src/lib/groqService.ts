@@ -3,7 +3,7 @@
  * Wykorzystuje model DeepSeek-R1-Distill-Llama-70B do generowania porad finansowych.
  */
 
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_API_URL = "/api/groq/chat/completions";
 const MODEL_ID = "llama-3.3-70b-versatile";
 
 const SYSTEM_PROMPT = `
@@ -70,7 +70,8 @@ export async function getGroqAIAdvice(simulationContext: string): Promise<string
 
     return content;
   } catch (error: any) {
-    console.error("[Groq Service] Error:", error);
-    throw error;
+    console.error("[Groq Service] Critical network error or CORS block:", error);
+    // Zwracamy czytelny błąd, ale nie rzucamy wyjątku wyżej w sposób, który mógłby zablokować UI
+    return "Przepraszamy, usługa doradcy AI jest chwilowo niedostępna (Błąd połączenia). Suwaki i symulacja działają poprawnie.";
   }
 }

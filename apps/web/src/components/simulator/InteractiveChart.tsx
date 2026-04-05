@@ -5,6 +5,7 @@ import { useSimulatorStore } from '../../store/useSimulatorStore';
 export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario: any, wasmReady: boolean }) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
+  const store = useSimulatorStore();
 
   useEffect(() => {
     if (chartContainerRef.current) {
@@ -194,7 +195,7 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
         mcMedianSeries 
       } = chartRef.current;
       const currentYear = new Date().getFullYear();
-      const mcResult = store.mcResult;
+      const currentMcResult = store.activePhase === 'accumulation' ? store.mcResultAccumulation : store.mcResultDecumulation;
       
       const taxShieldData = activeScenario.yearlyData.map((d: any) => ({
         time: `${currentYear + d.year}-01-01`,
@@ -216,13 +217,13 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
       baseSeries.setData(baseData);
 
       // --- Przetwarzanie i wizualizacja danych Monte Carlo ---
-      if (mcResult && mcResult.points) {
+      if (currentMcResult && currentMcResult.points) {
         const years = activeScenario.yearlyData.map((d: any) => d.year);
         const startYearOffset = years[0];
         const endYearOffset = years[years.length - 1];
 
         // Filtrowanie punktów MC dopasowane do aktualnej osi czasu scenariusza
-        const filteredMcPoints = mcResult.points.filter((p: any) => 
+        const filteredMcPoints = currentMcResult.points.filter((p: any) => 
           p.year >= startYearOffset && p.year <= endYearOffset
         );
 
@@ -254,7 +255,7 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
 
       chartRef.current.chart.timeScale().fitContent();
     }
-  }, [activeScenario]);
+  }, [activeScenario, store.mcResultAccumulation, store.mcResultDecumulation, store.activePhase]);
 
   return (
     <section className="flex flex-col gap-4 mt-8 mb-4">

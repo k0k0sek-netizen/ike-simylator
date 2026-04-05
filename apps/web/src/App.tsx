@@ -246,7 +246,7 @@ export default function App() {
         </AnimatePresence>
 
         {/* === STAT SUMMARY (kontekstowy) === */}
-        <StatSummary activeScenario={activeScenario} phase={store.activePhase} />
+        <StatSummary key={store.activePhase} activeScenario={activeScenario} phase={store.activePhase} />
         
         {/* === EXPORT MENU (PDF/PNG) === */}
         <ExportMenu 
