@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSimulatorStore } from '../../store/useSimulatorStore';
 import { useEffect, useRef } from 'react';
+import { MODEL_ID } from '../../lib/groqService';
 
 export function AIAdvisorPanel() {
   const store = useSimulatorStore();
@@ -93,7 +94,7 @@ export function AIAdvisorPanel() {
             ) : store.aiLastResponse ? (
               <div className="relative p-5 rounded-2xl bg-secondary/5 border border-secondary/20 shadow-inner group">
                 <div className="absolute top-2 right-4 text-[10px] font-black uppercase text-secondary/40 tracking-widest pointer-events-none">
-                  AI ANALYTICS - LLAMA 3.1 70B
+                  AI ANALYTICS - {MODEL_ID.replace('-versatile', '').toUpperCase()}
                 </div>
                 
                 <div className="prose prose-invert prose-sm max-w-none prose-headings:font-headline prose-p:font-body prose-p:leading-relaxed text-slate-700 dark:text-slate-200">

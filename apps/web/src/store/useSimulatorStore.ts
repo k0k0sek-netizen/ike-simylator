@@ -151,9 +151,22 @@ export const useSimulatorStore = create<SimulatorState>()(
         return state;
       }),
 
-      setIsCoreIke: (val) => set({ isCoreIke: val }),
-      setIsSatIke: (val) => set({ isSatIke: val }),
-      setIsBondsIke: (val) => set({ isBondsIke: val }),
+      setIsCoreIke: (val) => set((state) => ({ 
+        isCoreIke: val,
+        // Jeśli włączamy IKE dla rdzenia, musimy wyłączyć IKE dla obligacji EDO (unikalność IKE)
+        isBondsIke: val ? false : state.isBondsIke
+      })),
+      setIsSatIke: (val) => set((state) => ({ 
+        isSatIke: val,
+        // Jeśli włączamy IKE dla satelity, musimy wyłączyć IKE dla obligacji EDO
+        isBondsIke: val ? false : state.isBondsIke
+      })),
+      setIsBondsIke: (val) => set((state) => ({ 
+        isBondsIke: val,
+        // Jeśli włączamy IKE dla obligacji EDO, musimy wyłączyć IKE dla akcji i krypto
+        isCoreIke: val ? false : state.isCoreIke,
+        isSatIke: val ? false : state.isSatIke
+      })),
       setMonthlyWithdrawal: (val) => set({ monthlyWithdrawal: val }),
       setWithdrawalYears: (val) => set({ withdrawalYears: val }),
       setActivePhase: (val) => set({ activePhase: val }),

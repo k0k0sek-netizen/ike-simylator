@@ -30,14 +30,17 @@ export function exportSimulationContext(): string {
   const strategyName = rebalancingStrategy === 1 ? "Twardy Roczny Rebalancing" : "Brak Rebalancingu";
   const horizon = retirementAge - currentAge;
 
+  const isMaklerskieIkeActive = isCoreIke || isSatIke;
+  const legalBlockMsg = " - BLOKADA PRAWNA: INNE KONTO IKE JEST JUŻ AKTYWNE. SUROWY ZAKAZ REKOMENDOWANIA PRZENIESIENIA DO IKE";
+
   let context = `--- KONTEKST SYMULACJI FINANSOWEJ ---
 Użytkownik: Wiek ${currentAge} lat, planowana emerytura w wieku ${retirementAge} lat (Horyzont: ${horizon} lat).
 Budowa kapitału: Wpłata ${monthlyContribution} PLN/mc, wzrost wpłaty o inflację (${inflationRate}%).
 
 ALOKACJA PORTFELA (BARDZO WAŻNE):
-- Akcje Świat: ${customCoreWeight}% | STATUS TARCZY: ${isCoreIke ? 'IKE WŁĄCZONE (0% PODATKU)' : 'BRAK IKE (19% PODATKU BELKI)'}
-- Kryptowaluty: ${customSatWeight}% | STATUS TARCZY: ${isSatIke ? 'IKE WŁĄCZONE (0% PODATKU)' : 'BRAK IKE (19% PODATKU BELKI)'}
-- Obligacje EDO: ${customBondsWeight}% | STATUS TARCZY: ${isBondsIke ? 'IKE WŁĄCZONE (0% PODATKU)' : 'BRAK IKE (19% PODATKU BELKI)'}
+- Akcje Świat: ${customCoreWeight}% | STATUS TARCZY: ${isCoreIke ? 'IKE WŁĄCZONE (0% PODATKU)' : 'BRAK IKE (19% PODATKU BELKI)'}${!isCoreIke && isBondsIke ? legalBlockMsg : ''}
+- Kryptowaluty: ${customSatWeight}% | STATUS TARCZY: ${isSatIke ? 'IKE WŁĄCZONE (0% PODATKU)' : 'BRAK IKE (19% PODATKU BELKI)'}${!isSatIke && isBondsIke ? legalBlockMsg : ''}
+- Obligacje EDO: ${customBondsWeight}% | STATUS TARCZY: ${isBondsIke ? 'IKE WŁĄCZONE (0% PODATKU)' : 'BRAK IKE (19% PODATKU BELKI)'}${!isBondsIke && isMaklerskieIkeActive ? legalBlockMsg : ''}
 
 STRATEGIA: ${strategyName}
 
