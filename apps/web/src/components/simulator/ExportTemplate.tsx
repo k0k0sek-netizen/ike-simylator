@@ -104,17 +104,23 @@ export function ExportTemplate({ activeScenario }: { activeScenario: any }) {
 
       {/* KPI GŁÓWNE */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '20px' }}>
-        {[
-          { label: 'KAPITAŁ KOŃCOWY', value: formatCurrency(finalNominal), color: '#ffffff' },
-          { label: 'TARCZA PODATKOWA', value: formatCurrency(totalTaxShield), color: '#b721ff' },
-          { label: 'SUKCES (MC)', value: `${successRate}%`, color: '#4edea3' },
-          { label: 'HORYZONT', value: `${isAccumulation ? years : store.withdrawalYears} lat`, color: '#ffb2b9' },
-        ].map((stat, i) => (
-          <div key={i} style={{ backgroundColor: '#191f31', padding: '20px', borderRadius: '12px', border: '1px solid #23293c' }}>
-            <p style={{ margin: '0 0 5px 0', fontSize: '10px', color: '#908fa0', fontWeight: 'bold' }}>{stat.label}</p>
-            <p style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: stat.color }}>{stat.value}</p>
-          </div>
-        ))}
+        {(() => {
+          const taxPaid = activeScenario?.taxPaid || 0;
+          const taxColor = taxPaid > 0 ? '#ef4444' : '#4edea3';
+          const taxValue = taxPaid > 0 ? `- ${formatCurrency(taxPaid)}` : '0 zł';
+
+          return [
+            { label: 'KAPITAŁ KOŃCOWY', value: formatCurrency(finalNominal), color: '#ffffff' },
+            { label: 'TARCZA PODATKOWA', value: formatCurrency(totalTaxShield), color: '#b721ff' },
+            { label: 'SUKCES (MC)', value: `${successRate}%`, color: '#4edea3' },
+            { label: 'ZAPŁACONY PODATEK', value: taxValue, color: taxColor },
+          ].map((stat, i) => (
+            <div key={i} style={{ backgroundColor: '#191f31', padding: '20px', borderRadius: '12px', border: '1px solid #23293c' }}>
+              <p style={{ margin: '0 0 5px 0', fontSize: '10px', color: '#908fa0', fontWeight: 'bold' }}>{stat.label}</p>
+              <p style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: stat.color }}>{stat.value}</p>
+            </div>
+          ));
+        })()}
       </div>
 
       {/* PARAMETRY SYMULACJI */}
