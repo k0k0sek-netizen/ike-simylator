@@ -19,7 +19,7 @@ Projekt jest dedykowany dla **świadomych inwestorów**, którzy optymalizują o
 *   **Engine**: Rust (Wasm) — wydajny silnik matematyczny `f64` działający w piaskownicy przeglądarki.
 *   **Persistence**: PGlite — lokalna instancja PostgreSQL do zapisywania scenariuszy i portfeli.
 *   **State Management**: Zustand — reaktywne zarządzanie parametrami symulacji i fazami.
-*   **Export**: Native Export Engine — autorski wzorzec generowania dokumentów PDF/PNG przez izolowany HTML/DOM (bypass dla asynchroniczności).
+*   **Export**: SVG Vector Engine — autorski silnik renderowania raportów z rygorystycznym użyciem twardych kodów HEX, eliminujący błędy parserów CSS i zapewniający wysoką wierność PDF/PNG.
 *   **UX/UI**: Tailwind v4 + Framer Motion — kinetyczne liczniki i mikro-interakcje.
 *   **Wasm-React Bridge**: Agregacyjna optymalizacja payloadu statystycznego (percentyle P10/50/90 liczone po stronie Rust) dla płynnej wizualizacji probabilistycznej (Area Charts).
 
