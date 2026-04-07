@@ -105,7 +105,7 @@ export function ExportTemplate({ activeScenario }: { activeScenario: any }) {
       {/* KPI GŁÓWNE */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '20px' }}>
         {(() => {
-          const taxPaid = activeScenario?.taxPaid || 0;
+          const taxPaid = lastYear?.taxPaid || 0;
           const taxColor = taxPaid > 0 ? '#ef4444' : '#4edea3';
           const taxValue = taxPaid > 0 ? `- ${formatCurrency(taxPaid)}` : '0 zł';
 
