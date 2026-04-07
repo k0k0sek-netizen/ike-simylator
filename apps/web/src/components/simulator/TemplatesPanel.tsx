@@ -68,7 +68,7 @@ export function TemplatesPanel({}: TemplatesPanelProps) {
   ];
 
   return (
-    <section className="space-y-6 pt-8 border-t border-outline-variant/10">
+    <section className="space-y-6 pt-8 border-t border-outline-variant/10 hide-for-pdf">
       <div className="flex items-center gap-3">
         <span className="material-symbols-outlined text-slate-400 dark:text-slate-500">layers</span>
         <h3 className="text-sm font-label uppercase tracking-widest" style={{ color: isDarkMode ? 'rgba(255,255,255,0.6)' : '#475569' }}>

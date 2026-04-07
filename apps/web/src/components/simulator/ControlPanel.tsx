@@ -59,7 +59,7 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
 
 
   const SaveButton = (
-    <div className="pt-8 border-t border-outline-variant/10">
+    <div className="pt-8 border-t border-outline-variant/10 hide-for-pdf">
       <motion.button
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
@@ -133,7 +133,7 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
                   <AnimatedCounter value={store.monthlyContribution} style={{ color: isDarkMode ? '#ffffff' : '#0f172a' }} className="text-xl font-headline font-bold" />
                 </div>
               </div>
-              <div className="relative flex items-center h-10 px-3 bg-white dark:bg-gray-800/50 rounded-xl transition-all duration-300 group-focus-within:bg-primary/5 border border-outline-variant/10 group-focus-within:border-primary/30">
+              <div className="relative flex items-center h-10 px-3 bg-white dark:bg-gray-800/50 rounded-xl transition-all duration-300 group-focus-within:bg-primary/5 border border-outline-variant/10 group-focus-within:border-primary/30 hide-for-pdf">
                 <input className="w-full h-1 bg-slate-100 dark:bg-gray-700/50 rounded-lg appearance-none cursor-pointer accent-primary" type="range" min="100" max="15000" step="100" value={store.monthlyContribution} onChange={(e) => store.setMonthlyContribution(Number(e.target.value))} />
               </div>
             </motion.div>
@@ -144,7 +144,7 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
                   <label className="text-[10px] font-label uppercase tracking-wider" style={{ color: isDarkMode ? 'rgba(255,255,255,0.6)' : '#475569' }}>Twój Wiek</label>
                   <AnimatedCounter value={store.currentAge} isCurrency={false} suffix=" Lat" style={{ color: isDarkMode ? '#ffffff' : '#0f172a' }} className="text-lg font-headline font-bold" />
                 </div>
-                <div className="relative flex items-center h-8 px-2 bg-white dark:bg-gray-800/50 rounded-lg border border-outline-variant/10 shadow-sm dark:shadow-none">
+                <div className="relative flex items-center h-8 px-2 bg-white dark:bg-gray-800/50 rounded-lg border border-outline-variant/10 shadow-sm dark:shadow-none hide-for-pdf">
                   <input className="w-full accent-primary" type="range" min="18" max="70" step="1" value={store.currentAge} onChange={(e) => store.setCurrentAge(Number(e.target.value))} />
                 </div>
               </motion.div>
@@ -154,7 +154,7 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
                   <label className="text-[10px] font-label uppercase tracking-wider" style={{ color: isDarkMode ? 'rgba(255,255,255,0.6)' : '#475569' }}>Emerytura</label>
                   <AnimatedCounter value={store.retirementAge} isCurrency={false} suffix=" Lat" style={{ color: isDarkMode ? '#ffffff' : '#0f172a' }} className="text-lg font-headline font-bold" />
                 </div>
-                <div className="relative flex items-center h-8 px-2 bg-white dark:bg-gray-800/50 rounded-lg border border-outline-variant/10 shadow-sm dark:shadow-none">
+                <div className="relative flex items-center h-8 px-2 bg-white dark:bg-gray-800/50 rounded-lg border border-outline-variant/10 shadow-sm dark:shadow-none hide-for-pdf">
                   <input className="w-full accent-primary" type="range" min="30" max="85" step="1" value={store.retirementAge} onChange={(e) => store.setRetirementAge(Number(e.target.value))} />
                 </div>
               </motion.div>
@@ -173,7 +173,7 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
                       </span>
                       <span className="text-secondary">{store.customCoreWeight}%</span>
                     </div>
-                    <input className="w-full accent-secondary" type="range" min="0" max="100" step="5" value={store.customCoreWeight} onChange={(e) => store.setAllocation(Number(e.target.value), undefined, undefined)} />
+                    <input className="w-full accent-secondary hide-for-pdf" type="range" min="0" max="100" step="5" value={store.customCoreWeight} onChange={(e) => store.setAllocation(Number(e.target.value), undefined, undefined)} />
                   </div>
 
                   <div className="space-y-2">
@@ -184,7 +184,7 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
                       </span>
                       <span className="text-amber-500">{store.customSatWeight}%</span>
                     </div>
-                    <input className="w-full accent-amber-500" type="range" min="0" max="100" step="5" value={store.customSatWeight} onChange={(e) => store.setAllocation(undefined, Number(e.target.value), undefined)} />
+                    <input className="w-full accent-amber-500 hide-for-pdf" type="range" min="0" max="100" step="5" value={store.customSatWeight} onChange={(e) => store.setAllocation(undefined, Number(e.target.value), undefined)} />
                   </div>
 
                   <div className="space-y-2">
@@ -195,7 +195,7 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
                       </span>
                       <span className="text-indigo-400">{store.customBondsWeight}%</span>
                     </div>
-                    <input className="w-full accent-indigo-400" type="range" min="0" max="100" step="5" value={store.customBondsWeight} onChange={(e) => store.setAllocation(undefined, undefined, Number(e.target.value))} />
+                    <input className="w-full accent-indigo-400 hide-for-pdf" type="range" min="0" max="100" step="5" value={store.customBondsWeight} onChange={(e) => store.setAllocation(undefined, undefined, Number(e.target.value))} />
                   </div>
                 </div>
 
@@ -215,35 +215,35 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
               <div className="flex flex-col gap-2">
                 <label className="text-[9px] font-label text-slate-500 dark:text-slate-400 uppercase">Zysk Świat</label>
                 <div className="flex items-center gap-2">
-                  <input className="w-full accent-secondary" type="range" min="0" max="15" step="0.5" value={store.coreRate} onChange={(e) => store.setCoreRate(Number(e.target.value))} />
+                  <input className="w-full accent-secondary hide-for-pdf" type="range" min="0" max="15" step="0.5" value={store.coreRate} onChange={(e) => store.setCoreRate(Number(e.target.value))} />
                   <span className="text-[10px] font-bold text-secondary min-w-[30px]">{store.coreRate}%</span>
                 </div>
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-[9px] font-label text-slate-500 dark:text-slate-400 uppercase">Zysk Krypto</label>
                 <div className="flex items-center gap-2">
-                  <input className="w-full accent-amber-500" type="range" min="0" max="40" step="1" value={store.satRate} onChange={(e) => store.setSatRate(Number(e.target.value))} />
+                  <input className="w-full accent-amber-500 hide-for-pdf" type="range" min="0" max="40" step="1" value={store.satRate} onChange={(e) => store.setSatRate(Number(e.target.value))} />
                   <span className="text-[10px] font-bold text-amber-500 min-w-[30px]">{store.satRate}%</span>
                 </div>
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-[9px] font-label text-slate-500 dark:text-slate-400 uppercase">Zysk EDO</label>
                 <div className="flex items-center gap-2">
-                  <input className="w-full accent-indigo-400" type="range" min="0" max="10" step="0.5" value={store.bondsRate} onChange={(e) => store.setBondsRate(Number(e.target.value))} />
+                  <input className="w-full accent-indigo-400 hide-for-pdf" type="range" min="0" max="10" step="0.5" value={store.bondsRate} onChange={(e) => store.setBondsRate(Number(e.target.value))} />
                   <span className="text-[10px] font-bold text-indigo-400 min-w-[30px]">{store.bondsRate}%</span>
                 </div>
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-[9px] font-label text-slate-500 dark:text-slate-400 uppercase">Waloryzacja (Step-up)</label>
                 <div className="flex items-center gap-2">
-                  <input className="w-full accent-primary" type="range" min="0" max="15" step="0.5" value={store.annualStepUp} onChange={(e) => store.setAnnualStepUp(Number(e.target.value))} />
+                  <input className="w-full accent-primary hide-for-pdf" type="range" min="0" max="15" step="0.5" value={store.annualStepUp} onChange={(e) => store.setAnnualStepUp(Number(e.target.value))} />
                   <span className="text-[10px] font-bold text-primary min-w-[30px]">{store.annualStepUp}%</span>
                 </div>
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-[9px] font-label text-slate-500 dark:text-slate-400 uppercase">Inflacja</label>
                 <div className="flex items-center gap-2">
-                  <input className="w-full accent-tertiary" type="range" min="0" max="15" step="0.5" value={store.inflationRate} onChange={(e) => store.setInflationRate(Number(e.target.value))} />
+                  <input className="w-full accent-tertiary hide-for-pdf" type="range" min="0" max="15" step="0.5" value={store.inflationRate} onChange={(e) => store.setInflationRate(Number(e.target.value))} />
                   <span className="text-[10px] font-bold text-tertiary min-w-[30px]">{store.inflationRate}%</span>
                 </div>
               </div>
@@ -277,7 +277,7 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
                 ].map((item, i) => (
                   <div key={i} className="flex justify-between items-center">
                     <span className={`text-[10px] font-bold uppercase ${item.color.split(' ')[1]}`}>{item.label}</span>
-                    <div className="flex bg-slate-100 dark:bg-gray-700/50 rounded-lg p-0.5 border border-outline-variant/10">
+                    <div className="flex bg-slate-100 dark:bg-gray-700/50 rounded-lg p-0.5 border border-outline-variant/10 hide-for-pdf">
                       <button 
                         onClick={() => !item.disabled && item.set(true)}
                         disabled={item.disabled}
@@ -310,7 +310,7 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
             <div className="pt-4 border-t border-outline-variant/10">
               <button 
                 onClick={() => setIsRiskExpanded(!isRiskExpanded)}
-                className="w-full flex items-center justify-between text-[10px] font-label text-outline uppercase tracking-widest hover:text-primary transition-colors"
+                className="w-full flex items-center justify-between text-[10px] font-label text-outline uppercase tracking-widest hover:text-primary transition-colors hide-for-pdf"
               >
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-sm">analytics</span>
@@ -335,7 +335,7 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
                           <label className="text-[9px] font-bold text-outline tracking-wider uppercase">Zmienność ŚWIAT (σ)</label>
                           <span className="text-[10px] font-black text-secondary">{store.coreVolatility}%</span>
                         </div>
-                        <input className="w-full accent-secondary" type="range" min="5" max="40" step="1" value={store.coreVolatility} onChange={(e) => store.setVolatility(Number(e.target.value), store.satVolatility, store.bondsVolatility)} />
+                        <input className="w-full accent-secondary hide-for-pdf" type="range" min="5" max="40" step="1" value={store.coreVolatility} onChange={(e) => store.setVolatility(Number(e.target.value), store.satVolatility, store.bondsVolatility)} />
                       </div>
 
                       <div className="space-y-3">
@@ -343,7 +343,7 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
                           <label className="text-[9px] font-bold text-outline tracking-wider uppercase">Zmienność KRYPTO (σ)</label>
                           <span className="text-[10px] font-black text-amber-500">{store.satVolatility}%</span>
                         </div>
-                        <input className="w-full accent-amber-500" type="range" min="10" max="150" step="5" value={store.satVolatility} onChange={(e) => store.setVolatility(store.coreVolatility, Number(e.target.value), store.bondsVolatility)} />
+                        <input className="w-full accent-amber-500 hide-for-pdf" type="range" min="10" max="150" step="5" value={store.satVolatility} onChange={(e) => store.setVolatility(store.coreVolatility, Number(e.target.value), store.bondsVolatility)} />
                       </div>
 
                       <div className="space-y-3">
@@ -351,12 +351,12 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
                           <label className="text-[9px] font-bold text-outline tracking-wider uppercase">Zmienność OBLIGACJE (σ)</label>
                           <span className="text-[10px] font-black text-indigo-400">{store.bondsVolatility}%</span>
                         </div>
-                        <input className="w-full accent-indigo-400" type="range" min="1" max="10" step="0.5" value={store.bondsVolatility} onChange={(e) => store.setVolatility(store.coreVolatility, store.satVolatility, Number(e.target.value))} />
+                        <input className="w-full accent-indigo-400 hide-for-pdf" type="range" min="1" max="10" step="0.5" value={store.bondsVolatility} onChange={(e) => store.setVolatility(store.coreVolatility, store.satVolatility, Number(e.target.value))} />
                       </div>
 
                       <div className="pt-3 border-t border-primary/10">
                         <label className="text-[9px] font-bold text-outline tracking-wider uppercase block mb-3 text-center">Strategia Rebalancingu</label>
-                        <div className="grid grid-cols-2 gap-2 bg-slate-200 dark:bg-black/20 p-1 rounded-xl">
+                        <div className="grid grid-cols-2 gap-2 bg-slate-200 dark:bg-black/20 p-1 rounded-xl hide-for-pdf">
                           <button 
                             onClick={() => store.setRebalancingStrategy(0)}
                             className={`py-2 text-[8px] font-black uppercase rounded-lg transition-all ${store.rebalancingStrategy === 0 ? 'bg-primary text-black shadow-md' : 'text-outline/40 hover:text-outline'}`}
@@ -403,7 +403,7 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
               - {formatCurrency(store.monthlyWithdrawal)}
             </span>
           </div>
-          <div className="relative flex items-center h-8 px-2 bg-white dark:bg-gray-800/50 rounded-lg border border-outline-variant/5 shadow-sm dark:shadow-none transition-colors group-focus-within:bg-error/10">
+          <div className="relative flex items-center h-8 px-2 bg-white dark:bg-gray-800/50 rounded-lg border border-outline-variant/5 shadow-sm dark:shadow-none transition-colors group-focus-within:bg-error/10 hide-for-pdf">
             <input className="w-full accent-error" type="range" min="1000" max="30000" step="500" value={store.monthlyWithdrawal} onChange={(e) => store.setMonthlyWithdrawal(Number(e.target.value))} />
           </div>
         </motion.div>
@@ -413,7 +413,7 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
             <label className="text-[10px] font-label text-slate-600 dark:text-slate-400 uppercase tracking-wider">Długość życia na emeryturze</label>
             <AnimatedCounter value={store.withdrawalYears} isCurrency={false} suffix=" Lat" className="text-lg font-headline font-bold text-tertiary" />
           </div>
-          <div className="relative flex items-center h-8 px-2 bg-white dark:bg-gray-800/50 rounded-lg border border-outline-variant/5 shadow-sm dark:shadow-none transition-colors group-focus-within:bg-slate-50 dark:group-focus-within:bg-gray-800/80">
+          <div className="relative flex items-center h-8 px-2 bg-white dark:bg-gray-800/50 rounded-lg border border-outline-variant/5 shadow-sm dark:shadow-none transition-colors group-focus-within:bg-slate-50 dark:group-focus-within:bg-gray-800/80 hide-for-pdf">
             <input className="w-full accent-tertiary" type="range" min="1" max="50" step="1" value={store.withdrawalYears} onChange={(e) => store.setWithdrawalYears(Number(e.target.value))} />
           </div>
         </motion.div>

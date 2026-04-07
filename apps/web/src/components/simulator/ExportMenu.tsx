@@ -11,7 +11,7 @@ export function ExportMenu({ onPrint, onExportPNG, isDarkMode }: ExportMenuProps
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="relative w-full mt-4">
+    <div className="relative w-full mt-4 hide-for-pdf">
       <motion.button 
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
@@ -24,9 +24,9 @@ export function ExportMenu({ onPrint, onExportPNG, isDarkMode }: ExportMenuProps
         className="w-full py-4 rounded-xl font-headline font-bold tracking-widest flex justify-center items-center gap-2 transition-all shadow-lg"
       >
         <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
-          {isOpen ? 'close' : 'ios_share'}
+          {isOpen ? 'close' : 'picture_as_pdf'}
         </span>
-        {isOpen ? 'ANULUJ' : 'UDOSTĘPNIJ WYNIK'}
+        {isOpen ? 'ANULUJ' : 'POBIERZ RAPORT PDF'}
       </motion.button>
 
       <AnimatePresence>

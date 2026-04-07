@@ -2,7 +2,15 @@ import { useEffect, useRef } from 'react';
 import { createChart, ColorType, AreaSeries, LineStyle, LineSeries } from 'lightweight-charts';
 import { useSimulatorStore } from '../../store/useSimulatorStore';
 
-export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario: any, wasmReady: boolean }) {
+export function InteractiveChart({ 
+  activeScenario, 
+  wasmReady, 
+  isExport = false 
+}: { 
+  activeScenario: any, 
+  wasmReady: boolean,
+  isExport?: boolean
+}) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
   const store = useSimulatorStore();
@@ -14,19 +22,25 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
           background: { type: ColorType.Solid, color: 'transparent' },
           textColor: '#908fa0',
         },
+        handleScroll: !isExport,
+        handleScale: !isExport,
+        crosshair: {
+          vertLine: { visible: !isExport },
+          horzLine: { visible: !isExport },
+        },
         grid: {
           vertLines: { color: 'rgba(70, 69, 84, 0.1)' },
           horzLines: { color: 'rgba(70, 69, 84, 0.1)' },
         },
-        width: chartContainerRef.current.clientWidth,
-        height: chartContainerRef.current.clientHeight,
+        width: isExport ? 820 : chartContainerRef.current.clientWidth,
+        height: isExport ? 400 : chartContainerRef.current.clientHeight,
         rightPriceScale: { 
           borderVisible: false, 
           visible: true,      // Skala osi Y
           autoScale: true,
           scaleMargins: {
-            top: 0.4,         // Zabezpieczenie przed "zgnieceniem" mediamy przez wysokie P90
-            bottom: 0.1,
+            top: 0.05,        // Tight margin for maximum coverage
+            bottom: 0.05,
           }
         },
         timeScale: { 
@@ -39,8 +53,8 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
       
       const taxShieldSeries = chart.addSeries(AreaSeries, {
         lineColor: '#b721ff',
-        topColor: 'rgba(183, 33, 255, 0.4)',
-        bottomColor: 'rgba(183, 33, 255, 0.05)',
+        topColor: isExport ? '#3d0a55' : 'rgba(183, 33, 255, 0.4)',
+        bottomColor: isExport ? '#0c1324' : 'rgba(183, 33, 255, 0.05)',
         lineWidth: 2,
         lastValueVisible: true, // Zostawiamy tę etykietę jako główny wynik portfela
         priceFormat: { type: 'volume' }
@@ -48,8 +62,8 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
       
       const netProfitSeries = chart.addSeries(AreaSeries, {
         lineColor: '#4edea3',
-        topColor: 'rgba(78, 222, 163, 0.5)',
-        bottomColor: 'rgba(78, 222, 163, 0.1)',
+        topColor: isExport ? '#1a4a37' : 'rgba(78, 222, 163, 0.5)',
+        bottomColor: isExport ? '#0c1324' : 'rgba(78, 222, 163, 0.1)',
         lineWidth: 2,
         lastValueVisible: false, // Ukrywamy, aby nie nakładało się na Tarczę IKE
         priceFormat: { type: 'volume' }
@@ -57,15 +71,15 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
       
       const baseSeries = chart.addSeries(AreaSeries, {
         lineColor: '#64748b',
-        topColor: 'rgba(100, 116, 139, 0.3)',
-        bottomColor: 'rgba(100, 116, 139, 0.05)',
+        topColor: isExport ? '#212936' : 'rgba(100, 116, 139, 0.3)',
+        bottomColor: isExport ? '#0c1324' : 'rgba(100, 116, 139, 0.05)',
         lineWidth: 2,
         lastValueVisible: false, // Sam kapitał nie musi mieć etykiety na osi Y
       });
 
       // --- Seria Monte Carlo (Lejek Prawdopodobieństwa - Subtelne Tło) ---
       const mcUpperSeries = chart.addSeries(LineSeries, {
-        color: 'rgba(78, 222, 163, 0.15)', // Bardzo niskie krycie dla tła
+        color: isExport ? '#123528' : 'rgba(78, 222, 163, 0.15)', // Twardy HEX dla eksportu
         lineWidth: 1,
         lineStyle: LineStyle.Dashed,
         lastValueVisible: false,           // Ukrywamy wartość na osi Y
@@ -73,7 +87,7 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
       });
 
       const mcLowerSeries = chart.addSeries(LineSeries, {
-        color: 'rgba(78, 222, 163, 0.15)',
+        color: isExport ? '#123528' : 'rgba(78, 222, 163, 0.15)',
         lineWidth: 1,
         lineStyle: LineStyle.Dashed,
         lastValueVisible: false,
@@ -81,9 +95,9 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
       });
 
       const mcMedianSeries = chart.addSeries(AreaSeries, {
-        lineColor: 'rgba(78, 222, 163, 0.3)',
-        topColor: 'rgba(78, 222, 163, 0.15)',
-        bottomColor: 'rgba(78, 222, 163, 0.05)',
+        lineColor: isExport ? '#4edea3' : 'rgba(78, 222, 163, 0.3)',
+        topColor: isExport ? '#0e2b20' : 'rgba(78, 222, 163, 0.15)',
+        bottomColor: isExport ? '#0c1324' : 'rgba(78, 222, 163, 0.05)',
         lineWidth: 2,
         lineStyle: LineStyle.Solid,
         lastValueVisible: false,
@@ -102,16 +116,26 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
 
       // --- Obsługa Tooltipa (Floating UI) ---
       const container = chartContainerRef.current;
-      const tooltip = document.createElement('div');
-      tooltip.style.display = 'none';
-      tooltip.style.position = 'absolute';
-      tooltip.style.zIndex = '50'; // Standardowy wysoki z-index wewnątrz kontekstu z-30 kontenera
-      tooltip.style.pointerEvents = 'none';
-      container.appendChild(tooltip);
+      let tooltip: HTMLDivElement | null = null;
+      
+      if (!isExport) {
+        tooltip = document.createElement('div');
+        tooltip.style.display = 'none';
+        tooltip.style.position = 'absolute';
+        tooltip.style.zIndex = '50';
+        tooltip.style.pointerEvents = 'none';
+        container.appendChild(tooltip);
+      }
 
       chart.subscribeCrosshairMove((param) => {
-        if (!param.time || param.point === undefined || !param.point.x || !param.point.y) {
-          tooltip.style.display = 'none';
+        if (!tooltip || isExport || 
+            param.point === undefined || 
+            !param.time || 
+            param.point.x < 0 || 
+            param.point.x > chartContainerRef.current!.clientWidth || 
+            param.point.y < 0 || 
+            param.point.y > chartContainerRef.current!.clientHeight) {
+          if (tooltip) tooltip.style.display = 'none';
           return;
         }
 
@@ -166,7 +190,7 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
       });
 
       const handleResize = () => {
-        if (chartContainerRef.current && chartRef.current) {
+        if (chartContainerRef.current && chartRef.current && !isExport) {
           chartRef.current.chart.applyOptions({ 
             width: chartContainerRef.current.clientWidth,
             height: chartContainerRef.current.clientHeight 
@@ -177,7 +201,9 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
 
       return () => {
         window.removeEventListener('resize', handleResize);
-        container.removeChild(tooltip);
+        if (tooltip && container.contains(tooltip)) {
+          container.removeChild(tooltip);
+        }
         chart.remove();
       };
     }
@@ -260,34 +286,35 @@ export function InteractiveChart({ activeScenario, wasmReady }: { activeScenario
   return (
     <section className="flex flex-col gap-4 mt-8 mb-4">
       {/* Kontener wykresu z wymuszonym kontekstem warstw z-30, aby Tooltip był nad legendą */}
-      <div className="relative z-30 w-full h-[400px] bg-surface-container-lowest rounded-2xl group hover:shadow-[0_0_30px_rgba(78,222,163,0.05)] transition-all duration-500" style={{ viewTransitionName: 'main-chart' }}>
-        <div className="absolute inset-0 bg-linear-to-t from-secondary/5 to-transparent rounded-2xl pointer-events-none"></div>
+      <div className={`relative z-30 w-full h-[400px] ${!isExport ? 'bg-surface-container-lowest rounded-2xl group hover:shadow-[0_0_30px_rgba(78,222,163,0.05)] transition-all duration-500' : ''}`} style={{ viewTransitionName: isExport ? 'none' : 'main-chart', backgroundColor: isExport ? '#070d1f' : undefined, borderRadius: isExport ? '16px' : undefined }}>
+        {!isExport && <div className="absolute inset-0 bg-linear-to-t from-secondary/5 to-transparent rounded-2xl pointer-events-none"></div>}
         <div ref={chartContainerRef} className="absolute inset-0 w-full h-full" />
       </div>
 
-      {/* Legenda z niższym kontekstem relative z-10, aby ustąpić miejsca dymkom wykresu */}
-      <div className="relative z-10 flex flex-wrap gap-4 px-2 overflow-x-auto pb-2 scrollbar-hide">
-        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#b721ff] shadow-[0_0_8px_#b721ff]"></span>
-          <span className="text-[10px] font-label text-slate-900 dark:text-white/80 tracking-widest uppercase font-black">Tarcza IKE</span>
+      {!isExport && (
+        <div className="relative z-10 flex flex-wrap gap-4 px-2 overflow-x-auto pb-2 scrollbar-hide">
+          <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#b721ff] shadow-[0_0_8px_#b721ff]"></span>
+            <span className="text-[10px] font-label text-slate-900 dark:text-white/80 tracking-widest uppercase font-black">Tarcza IKE</span>
+          </div>
+          <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
+            <span className="w-2.5 h-2.5 rounded-full bg-secondary shadow-[0_0_8px_#4edea3]"></span>
+            <span className="text-[10px] font-label text-slate-900 dark:text-white/80 tracking-widest uppercase font-black">Zysk Netto</span>
+          </div>
+          <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
+            <span className="w-2.5 h-2.5 rounded-full bg-slate-500 shadow-[0_0_8px_#64748b]"></span>
+            <span className="text-[10px] font-label text-slate-900 dark:text-white/80 tracking-widest uppercase font-black">Wpłacony Kapitał</span>
+          </div>
+          <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
+            <span className="w-2.5 h-2.5 rounded-full border-2 border-secondary/40 border-dashed"></span>
+            <span className="text-[10px] font-label text-slate-900 dark:text-white/80 tracking-widest uppercase font-black">Zakres P10-P90</span>
+          </div>
+          <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
+            <span className="w-2.5 h-2.5 rounded-full bg-secondary/30 border border-secondary/50"></span>
+            <span className="text-[10px] font-label text-slate-900 dark:text-white/80 tracking-widest uppercase font-black">Mediana MC</span>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
-          <span className="w-2.5 h-2.5 rounded-full bg-secondary shadow-[0_0_8px_#4edea3]"></span>
-          <span className="text-[10px] font-label text-slate-900 dark:text-white/80 tracking-widest uppercase font-black">Zysk Netto</span>
-        </div>
-        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
-          <span className="w-2.5 h-2.5 rounded-full bg-slate-500 shadow-[0_0_8px_#64748b]"></span>
-          <span className="text-[10px] font-label text-slate-900 dark:text-white/80 tracking-widest uppercase font-black">Wpłacony Kapitał</span>
-        </div>
-        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
-          <span className="w-2.5 h-2.5 rounded-full border-2 border-secondary/40 border-dashed"></span>
-          <span className="text-[10px] font-label text-slate-900 dark:text-white/80 tracking-widest uppercase font-black">Zakres P10-P90</span>
-        </div>
-        <div className="flex items-center gap-1.5 backdrop-blur-md bg-black/5 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
-          <span className="w-2.5 h-2.5 rounded-full bg-secondary/30 border border-secondary/50"></span>
-          <span className="text-[10px] font-label text-slate-900 dark:text-white/80 tracking-widest uppercase font-black">Mediana MC</span>
-        </div>
-      </div>
+      )}
     </section>
   );
 }

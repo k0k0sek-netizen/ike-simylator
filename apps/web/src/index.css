@@ -69,6 +69,10 @@
     background: rgba(46, 52, 71, 0.3);
     backdrop-filter: blur(16px);
   }
+
+  .is-exporting .hide-for-pdf {
+    display: none !important;
+  }
 }
 
 input[type='range']::-webkit-slider-thumb {

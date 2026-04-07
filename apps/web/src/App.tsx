@@ -14,7 +14,9 @@ import { PortfolioManager } from './components/simulator/PortfolioManager';
 import { AIAdvisorPanel } from './components/simulator/AIAdvisorPanel';
 import { AnimatedCounter } from './components/ui/AnimatedCounter';
 import { ExportMenu } from './components/simulator/ExportMenu';
-import { exportToNativePDF, exportToIsolatedPNG } from './utils/exportUtils';
+import { exportToIsolatedPNG } from './utils/exportUtils';
+import { triggerPrint } from './utils/pdfExportService';
+import { ExportTemplate } from './components/simulator/ExportTemplate';
 
 export default function App() {
   const [simResults, setSimResults] = useState<any[] | null>(null);
@@ -114,15 +116,15 @@ export default function App() {
   const retirementData = activeScenario?.yearlyData?.find((d: any) => d.year === years);
   const capitalAtRetirement = retirementData ? retirementData.nominalBalance : 0;
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (activeScenario) {
-      exportToNativePDF(activeScenario, store);
+      await triggerPrint('export-template');
     }
   };
 
   const handleExportPNG = async () => {
     if (activeScenario) {
-      await exportToIsolatedPNG(activeScenario, store);
+      await exportToIsolatedPNG(activeScenario);
     }
   };
 
@@ -153,7 +155,7 @@ export default function App() {
     >
       <Header />
       
-      <main className="pt-20 px-4 space-y-6 max-w-2xl mx-auto pb-28">
+      <main id="report-target" className="pt-20 px-4 space-y-6 max-w-2xl mx-auto pb-28">
         
         {/* === PRZEŁĄCZNIK ZAKŁADEK === */}
         <div className="relative flex bg-white dark:bg-gray-800/50 rounded-2xl p-1.5 border border-outline-variant/20 shadow-lg">
@@ -292,6 +294,9 @@ export default function App() {
         onClose={() => store.setManagerOpen(false)} 
       />
       <BottomNav />
+      
+      {/* EXPORT TEMPLATE (Off-screen) */}
+      <ExportTemplate activeScenario={activeScenario} />
     </motion.div>
   );
 }

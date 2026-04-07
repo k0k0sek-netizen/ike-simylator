@@ -16,7 +16,7 @@ export function Header() {
   }, [store.isDarkMode]);
   
   return (
-    <header className="fixed top-0 left-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/15 shadow-lg flex justify-between items-center px-4 sm:px-6 h-16 transition-all duration-500">
+    <header className="fixed top-0 left-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/15 shadow-lg flex justify-between items-center px-4 sm:px-6 h-16 transition-all duration-500 hide-for-pdf">
       <div className="flex items-center gap-2 sm:gap-3">
         <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>insights</span>
         <h1 className="font-headline font-black text-sm sm:text-lg lg:text-xl tracking-widest sm:tracking-widest text-on-surface">KINETIC<span className="text-primary">_</span>ORACLE</h1>
