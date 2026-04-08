@@ -1,4 +1,5 @@
 import { useSimulatorStore } from '../store/useSimulatorStore';
+import { AVAILABLE_INSTRUMENTS } from '../config/instruments';
 
 /**
  * Przekształca stan symulacji na skondensowany kontekst tekstowy dla LLM.
@@ -13,9 +14,7 @@ export function exportSimulationContext(): string {
     currentAge,
     retirementAge,
     inflationRate,
-    customCoreWeight,
-    customSatWeight,
-    customBondsWeight,
+    customPortfolio,
     isCoreIke,
     isSatIke,
     isBondsIke,
@@ -31,16 +30,35 @@ export function exportSimulationContext(): string {
   const horizon = retirementAge - currentAge;
 
   const isMaklerskieIkeActive = isCoreIke || isSatIke;
-  const legalBlockMsg = " - BLOKADA PRAWNA: INNE KONTO IKE JEST JUŻ AKTYWNE. SUROWY ZAKAZ REKOMENDOWANIA PRZENIESIENIA DO IKE";
 
-  let context = `--- KONTEKST SYMULACJI FINANSOWEJ ---
+  // Budowa listy instrumentów
+  const portfolioDetails = customPortfolio.map(item => {
+    const inst = AVAILABLE_INSTRUMENTS.find(i => i.id === item.instrumentId);
+    if (!inst) return `- Unknown (${item.instrumentId}): ${item.weight}%`;
+    
+    let ikeStatus = "BRAK IKE (19% PODATKU)";
+    if (inst.category === 'Baza' || inst.category === 'Core') {
+      ikeStatus = isCoreIke ? "IKE AKTYWNE (0% PODATKU)" : "KONTO OPODATKOWANE";
+    } else if (inst.category === 'Bezpiecznik') {
+      ikeStatus = isBondsIke ? "IKE AKTYWNE (0% PODATKU)" : "KONTO OPODATKOWANE";
+    } else {
+      ikeStatus = isSatIke ? "IKE AKTYWNE (0% PODATKU)" : "KONTO OPODATKOWANE";
+    }
+
+    return `- ${item.weight}% ${inst.ticker} (${inst.name}) | Kategoria: ${inst.category} | Podatki: ${ikeStatus}`;
+  }).join('\n');
+
+  let context = `--- KONTEKST SYMULACJI FINANSOWEJ (KINETIC WEALTH) ---
 Użytkownik: Wiek ${currentAge} lat, planowana emerytura w wieku ${retirementAge} lat (Horyzont: ${horizon} lat).
 Budowa kapitału: Wpłata ${monthlyContribution} PLN/mc, wzrost wpłaty o inflację (${inflationRate}%).
 
-ALOKACJA PORTFELA (BARDZO WAŻNE):
-- Akcje Świat: ${customCoreWeight}% | STATUS TARCZY: ${isCoreIke ? 'IKE WŁĄCZONE (0% PODATKU)' : 'BRAK IKE (19% PODATKU BELKI)'}${!isCoreIke && isBondsIke ? legalBlockMsg : ''}
-- Kryptowaluty: ${customSatWeight}% | STATUS TARCZY: ${isSatIke ? 'IKE WŁĄCZONE (0% PODATKU)' : 'BRAK IKE (19% PODATKU BELKI)'}${!isSatIke && isBondsIke ? legalBlockMsg : ''}
-- Obligacje EDO: ${customBondsWeight}% | STATUS TARCZY: ${isBondsIke ? 'IKE WŁĄCZONE (0% PODATKU)' : 'BRAK IKE (19% PODATKU BELKI)'}${!isBondsIke && isMaklerskieIkeActive ? legalBlockMsg : ''}
+SKŁAD PORTFELA (INSTRUMENTY RYNEK):
+${portfolioDetails}
+
+TARCZA PODATKOWA (GLOBALNA KONFIGURACJA):
+- Portfel Maklerski (Core/Sat): ${isMaklerskieIkeActive ? 'REJESTRACJA IKE' : 'KONTO ZWYKŁE'}
+- Portfel Obligacji (EDO): ${isBondsIke ? 'REJESTRACJA IKE-EDO' : 'KONTO ZWYKŁE'}
+- Status Prawny: ${isBondsIke && isMaklerskieIkeActive ? 'KRYTYCZNY BŁĄD PRAWNY: Dwa rodzaje IKE naraz!' : 'Poprawny'}
 
 STRATEGIA: ${strategyName}
 

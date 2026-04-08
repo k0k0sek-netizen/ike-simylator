@@ -257,30 +257,6 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
                     className="overflow-hidden space-y-5"
                   >
                     <div className="bg-primary/5 rounded-xl p-4 border border-primary/20 space-y-4">
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <label className="text-[9px] font-bold text-outline tracking-wider uppercase">Zmienność ŚWIAT (σ)</label>
-                          <span className="text-[10px] font-black text-secondary">{store.coreVolatility}%</span>
-                        </div>
-                        <input className="w-full accent-secondary hide-for-pdf" type="range" min="5" max="40" step="1" value={store.coreVolatility} onChange={(e) => store.setVolatility(Number(e.target.value), store.satVolatility, store.bondsVolatility)} />
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <label className="text-[9px] font-bold text-outline tracking-wider uppercase">Zmienność KRYPTO (σ)</label>
-                          <span className="text-[10px] font-black text-amber-500">{store.satVolatility}%</span>
-                        </div>
-                        <input className="w-full accent-amber-500 hide-for-pdf" type="range" min="10" max="150" step="5" value={store.satVolatility} onChange={(e) => store.setVolatility(store.coreVolatility, Number(e.target.value), store.bondsVolatility)} />
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <label className="text-[9px] font-bold text-outline tracking-wider uppercase">Zmienność OBLIGACJE (σ)</label>
-                          <span className="text-[10px] font-black text-indigo-400">{store.bondsVolatility}%</span>
-                        </div>
-                        <input className="w-full accent-indigo-400 hide-for-pdf" type="range" min="1" max="10" step="0.5" value={store.bondsVolatility} onChange={(e) => store.setVolatility(store.coreVolatility, store.satVolatility, Number(e.target.value))} />
-                      </div>
-
                       <div className="pt-3 border-t border-primary/10">
                         <label className="text-[9px] font-bold text-outline tracking-wider uppercase block mb-3 text-center">Strategia Rebalancingu</label>
                         <div className="grid grid-cols-2 gap-2 bg-slate-200 dark:bg-black/20 p-1 rounded-xl hide-for-pdf">

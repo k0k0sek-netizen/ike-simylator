@@ -268,11 +268,14 @@ export const useSimulatorStore = create<SimulatorState>()(
             });
           }
           
-          // Automatyczne odświeżenie porady AI po przeliczeniu Monte Carlo, jeśli AI jest gotowe
+          /* 
+          // Automatyczne odświeżenie porady AI po przeliczeniu Monte Carlo zostaje wyłączone (API Guard)
+          // Wyzwalanie następuje wyłącznie na żądanie użytkownika w AIAdvisorPanel.tsx
           const currentState = get();
           if (currentState.aiStatus === 'ready') {
             currentState.calculateAIAdvice();
           }
+          */
         } catch (error) {
           console.error("🟢 Monte Carlo Engine Error:", error);
         }

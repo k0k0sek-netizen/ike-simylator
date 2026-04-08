@@ -30,11 +30,11 @@ export function KineticTooltip({ children, content, title, stats }: KineticToolt
       <AnimatePresence>
         {isVisible && (
           <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 5, scale: 0.95 }}
+            exit={{ opacity: 0, y: -5, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            className="absolute bottom-full mb-3 w-64 p-4 rounded-xl bg-slate-900/95 dark:bg-black/90 backdrop-blur-md border border-outline-variant/20 shadow-2xl z-1000 pointer-events-none origin-bottom"
+            className="absolute top-full mt-2 w-64 p-4 rounded-xl bg-slate-900/95 dark:bg-black/90 backdrop-blur-md border border-outline-variant/20 shadow-2xl z-1000 pointer-events-none origin-top"
           >
             {title && (
               <div className="font-headline font-bold text-white uppercase tracking-widest text-[11px] mb-2 pb-2 border-b border-white/10">
@@ -63,7 +63,7 @@ export function KineticTooltip({ children, content, title, stats }: KineticToolt
               {content}
             </p>
 
-            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900/95 dark:bg-black/90 border-r border-b border-outline-variant/20 rotate-45" />
+            <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900/95 dark:bg-black/90 border-l border-t border-outline-variant/20 rotate-45" />
           </motion.div>
         )}
       </AnimatePresence>
