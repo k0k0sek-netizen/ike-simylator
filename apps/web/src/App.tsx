@@ -18,9 +18,12 @@ import { exportToIsolatedPNG } from './utils/exportUtils';
 import { triggerPrint } from './utils/pdfExportService';
 import { ExportTemplate } from './components/simulator/ExportTemplate';
 import { SettingsView } from './components/settings/SettingsView';
+import { PortfolioBuilder } from './components/builder/PortfolioBuilder';
+import { InfoModal } from './components/ui/InfoModal';
 
 export default function App() {
   const [simResults, setSimResults] = useState<any[] | null>(null);
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
 
   const wasmModule = useRef<any>(null);
   const store = useSimulatorStore();
@@ -271,7 +274,21 @@ export default function App() {
               />
               
               {/* === WYKRES (filtrowane dane) === */}
-              <InteractiveChart activeScenario={chartScenario} wasmReady={store.engineType !== 'LOADING'} />
+              <div className="relative">
+                <div className="flex justify-between items-end mb-2">
+                  <h3 className="text-[10px] font-label text-outline uppercase tracking-wider">
+                    Symulacja Scenariuszy Wasm
+                  </h3>
+                  <button 
+                    onClick={() => setIsInfoOpen(true)}
+                    className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-secondary/10 text-secondary border border-secondary/20 hover:bg-secondary hover:text-black transition-colors font-bold uppercase"
+                  >
+                    Demistyfikuj
+                    <span className="material-symbols-outlined text-[13px]">help</span>
+                  </button>
+                </div>
+                <InteractiveChart activeScenario={chartScenario} wasmReady={store.engineType !== 'LOADING'} />
+              </div>
               
               {/* === TABELA INSPEKCYJNA (rok po roku) === */}
               <YearlyDataTable 
@@ -294,11 +311,7 @@ export default function App() {
           )}
 
           {store.activeTab === 'builder' && (
-            <div className="flex flex-col items-center justify-center py-24 text-center">
-              <span className="material-symbols-outlined text-6xl text-primary mb-4" style={{ fontVariationSettings: "'FILL' 1" }}>architecture</span>
-              <h2 className="text-2xl font-headline font-black tracking-widest text-on-surface mb-2">KREATOR PORTFELA</h2>
-              <p className="text-slate-400 font-label">Rozdział środków między rynkowe ETF-y i obligacje.<br/>[W BUDOWIE]</p>
-            </div>
+            <PortfolioBuilder />
           )}
 
           {store.activeTab === 'history' && (
@@ -329,6 +342,8 @@ export default function App() {
       
       {/* EXPORT TEMPLATE (Off-screen) */}
       <ExportTemplate activeScenario={activeScenario} />
+      
+      <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
     </motion.div>
   );
 }

@@ -30,7 +30,6 @@ export function Header() {
         <div className="hidden md:block">
           <EngineStatusBadge engineType={store.engineType} />
         </div>
-
         {/* Theme Toggle - Reactive! */}
         <button 
           onClick={store.toggleDarkMode}
@@ -49,14 +48,6 @@ export function Header() {
               {store.isDarkMode ? 'light_mode' : 'dark_mode'}
             </motion.span>
           </AnimatePresence>
-        </button>
-
-        <button 
-          onClick={() => store.setManagerOpen(true)}
-          className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-background transition-all duration-300 group shadow-lg shadow-primary/5 active:scale-95"
-        >
-          <span className="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">folder_shared</span>
-          <span className="text-[10px] font-black uppercase tracking-widest hidden lg:inline">Moje Portfele</span>
         </button>
       </div>
     </header>

@@ -6,6 +6,7 @@ export interface Instrument {
   expectedCagr: number;
   volatility: number;
   isIkeEligible: boolean;
+  description: string;
 }
 
 export const AVAILABLE_INSTRUMENTS: Instrument[] = [
@@ -17,6 +18,7 @@ export const AVAILABLE_INSTRUMENTS: Instrument[] = [
     expectedCagr: 8.5,
     volatility: 15,
     isIkeEligible: true,
+    description: 'Najpopularniejszy na świecie ETF pokrywający akcje globalne. Podstawa portfela indeksowego (tzw. "Boglehead"). Średnie ryzyko, zdywersyfikowany.'
   },
   {
     id: 'sxr8',
@@ -26,6 +28,7 @@ export const AVAILABLE_INSTRUMENTS: Instrument[] = [
     expectedCagr: 10.5,
     volatility: 15,
     isIkeEligible: true,
+    description: 'ETF śledzący 500 największych amerykańskich spółek. Agresywniejszy niż ogólnoświatowy, często podstawa napędowa agresywnych zysków w portfelu. Wygrany ostatniej dekady.'
   },
   {
     id: 'sxrv',
@@ -35,6 +38,7 @@ export const AVAILABLE_INSTRUMENTS: Instrument[] = [
     expectedCagr: 15.0,
     volatility: 22,
     isIkeEligible: true,
+    description: 'ETF ładujący 100 największych spółek technologicznych (Apple, Nvidia, Microsoft). Gigantyczny zwrot, ekstremalne tąpnięcia na "Bessie". Traktuj to ostrożnie (tzw. satelita).'
   },
   {
     id: 'qdv5',
@@ -44,6 +48,7 @@ export const AVAILABLE_INSTRUMENTS: Instrument[] = [
     expectedCagr: 12.0,
     volatility: 25,
     isIkeEligible: true,
+    description: 'Gospodarka rozwijająca się. Oczekiwane mocne wzrosty, gigantyczna niepewność regulacyjna. Skoncentruj to wyłącznie w kilkuprocentowej części wariackiej portfela.'
   },
   {
     id: 'vbtc',
@@ -53,6 +58,7 @@ export const AVAILABLE_INSTRUMENTS: Instrument[] = [
     expectedCagr: 25.0,
     volatility: 60,
     isIkeEligible: false,
+    description: 'Fizyczny pokryty w 100% Bitcoin z giełdy niemieckiej Xetra. Ekstremalne ryzyko, potężna asymetria. Dodaj jako 1-5% zabezpieczenie i obserwuj fajerwerki.'
   },
   {
     id: 'edo',
@@ -61,6 +67,7 @@ export const AVAILABLE_INSTRUMENTS: Instrument[] = [
     category: 'Bezpiecznik',
     expectedCagr: 6.0,
     volatility: 2,
-    isIkeEligible: false, // EDO same w sobie w IKE stanowią dedykowane konto "IKE-Obligacje", co tworzy odzielną pulę limitową i często wyklucza inwestycje giełdowe na klasycznym IKE (wymóg 1 IKE per os.). Dla logiki klasycznego symulatora: traktujemy to odrębnie.
+    isIkeEligible: false,
+    description: 'Bezpiecznik od Skarbu Państwa na wypadek absolutnej paniki na rynkach. Stabilnie pobija inflację, nie ulega tąpnięciom w czasach "Bessy". Prawny azyl.'
   }
 ];

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSimulatorStore } from '../../store/useSimulatorStore';
 import { AnimatedCounter } from '../ui/AnimatedCounter';
-import { AllocationDonut } from '../ui/AllocationDonut';
 import { savePortfolio } from '../../db';
 
 const formatCurrency = (val: number) => {
@@ -160,79 +159,7 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
               </motion.div>
             </div>
 
-            <div className="space-y-4 pt-4 border-t border-outline-variant/10">
-              <div className="flex flex-col lg:flex-row gap-8 items-center lg:items-start">
-                <div className="flex-1 w-full space-y-6">
-                  <p className="text-[10px] font-label text-outline uppercase tracking-wider mb-2">Twoja Alokacja (Suma 100%)</p>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-[10px] uppercase font-bold">
-                      <span className="text-secondary flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-secondary"></div>
-                        Świat (Akcje)
-                      </span>
-                      <span className="text-secondary">{store.customCoreWeight}%</span>
-                    </div>
-                    <input className="w-full accent-secondary hide-for-pdf" type="range" min="0" max="100" step="5" value={store.customCoreWeight} onChange={(e) => store.setAllocation(Number(e.target.value), undefined, undefined)} />
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-[10px] uppercase font-bold">
-                      <span className="text-amber-500 flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
-                        Krypto / Satelita
-                      </span>
-                      <span className="text-amber-500">{store.customSatWeight}%</span>
-                    </div>
-                    <input className="w-full accent-amber-500 hide-for-pdf" type="range" min="0" max="100" step="5" value={store.customSatWeight} onChange={(e) => store.setAllocation(undefined, Number(e.target.value), undefined)} />
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-[10px] uppercase font-bold">
-                      <span className="text-indigo-400 flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
-                        Obligacje EDO
-                      </span>
-                      <span className="text-indigo-400">{store.customBondsWeight}%</span>
-                    </div>
-                    <input className="w-full accent-indigo-400 hide-for-pdf" type="range" min="0" max="100" step="5" value={store.customBondsWeight} onChange={(e) => store.setAllocation(undefined, undefined, Number(e.target.value))} />
-                  </div>
-                </div>
-
-                <div className="hidden sm:flex flex-col items-center gap-4 bg-white dark:bg-gray-800/10 p-4 rounded-2xl border border-outline-variant/10 border-dashed">
-                   <p className="text-[10px] font-label text-outline/60 uppercase tracking-widest">Wizualizacja Składu</p>
-                   <AllocationDonut 
-                      core={store.customCoreWeight}
-                      sat={store.customSatWeight}
-                      bonds={store.customBondsWeight}
-                      size={140}
-                   />
-                </div>
-              </div>
-            </div>
-
             <div className="grid grid-cols-2 gap-x-6 gap-y-4 pt-4 border-t border-outline-variant/10">
-              <div className="flex flex-col gap-2">
-                <label className="text-[9px] font-label text-slate-500 dark:text-slate-400 uppercase">Zysk Świat</label>
-                <div className="flex items-center gap-2">
-                  <input className="w-full accent-secondary hide-for-pdf" type="range" min="0" max="15" step="0.5" value={store.coreRate} onChange={(e) => store.setCoreRate(Number(e.target.value))} />
-                  <span className="text-[10px] font-bold text-secondary min-w-[30px]">{store.coreRate}%</span>
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-[9px] font-label text-slate-500 dark:text-slate-400 uppercase">Zysk Krypto</label>
-                <div className="flex items-center gap-2">
-                  <input className="w-full accent-amber-500 hide-for-pdf" type="range" min="0" max="40" step="1" value={store.satRate} onChange={(e) => store.setSatRate(Number(e.target.value))} />
-                  <span className="text-[10px] font-bold text-amber-500 min-w-[30px]">{store.satRate}%</span>
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-[9px] font-label text-slate-500 dark:text-slate-400 uppercase">Zysk EDO</label>
-                <div className="flex items-center gap-2">
-                  <input className="w-full accent-indigo-400 hide-for-pdf" type="range" min="0" max="10" step="0.5" value={store.bondsRate} onChange={(e) => store.setBondsRate(Number(e.target.value))} />
-                  <span className="text-[10px] font-bold text-indigo-400 min-w-[30px]">{store.bondsRate}%</span>
-                </div>
-              </div>
               <div className="flex flex-col gap-2">
                 <label className="text-[9px] font-label text-slate-500 dark:text-slate-400 uppercase">Waloryzacja (Step-up)</label>
                 <div className="flex items-center gap-2">
@@ -426,12 +353,8 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
               <p className="text-sm font-headline font-bold text-slate-700 dark:text-white/60">{formatCurrency(store.monthlyContribution)}</p>
             </div>
             <div className="p-2 rounded bg-slate-50 dark:bg-gray-800/10 border border-outline-variant/5">
-              <p className="text-[9px] font-label text-slate-500 dark:text-slate-500 uppercase">Alokacja (Rdzeń/Sat/Bon)</p>
-              <p className="text-sm font-headline font-bold text-slate-700 dark:text-white/60">{store.customCoreWeight}% / {store.customSatWeight}% / {store.customBondsWeight}%</p>
-            </div>
-            <div className="p-2 rounded bg-slate-50 dark:bg-gray-800/10 border border-outline-variant/5">
-              <p className="text-[9px] font-label text-slate-500 dark:text-slate-500 uppercase">Stopy (Rdzeń/Sat/Bon)</p>
-              <p className="text-sm font-headline font-bold text-slate-700 dark:text-white/60">{store.coreRate}% / {store.satRate}% / {store.bondsRate}%</p>
+              <p className="text-[9px] font-label text-slate-500 dark:text-slate-500 uppercase">Ilość Aktywów (Kreator)</p>
+              <p className="text-sm font-headline font-bold text-slate-700 dark:text-white/60">{store.customPortfolio.length} ETF/Krypto</p>
             </div>
             <div className="p-2 rounded bg-slate-50 dark:bg-gray-800/10 border border-outline-variant/5">
               <p className="text-[9px] font-label text-slate-500 dark:text-slate-500 uppercase">Status Tarczy IKE</p>

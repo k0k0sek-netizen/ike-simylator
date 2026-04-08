@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { AVAILABLE_INSTRUMENTS } from '../config/instruments';
 
 export interface MonteCarloPoint {
   year: number;
@@ -13,10 +14,17 @@ export interface MonteCarloSummary {
   successRate: number;
 }
 
+export interface PortfolioItem {
+  instrumentId: string;
+  weight: number;
+}
+
+
 export type AppTab = 'simulator' | 'builder' | 'history' | 'settings';
 
 export interface SimulatorState {
   activeTab: AppTab;
+  customPortfolio: PortfolioItem[];
   monthlyContribution: number;
   currentAge: number;
   retirementAge: number;
@@ -52,6 +60,7 @@ export interface SimulatorState {
   aiLastResponse: string | null;
   aiError: string | null;
 
+  setCustomPortfolio: (items: PortfolioItem[]) => void;
   setActiveTab: (tab: AppTab) => void;
   setMonthlyContribution: (val: number) => void;
   setCurrentAge: (val: number) => void;
@@ -86,6 +95,10 @@ export const useSimulatorStore = create<SimulatorState>()(
   persist(
     (set, get) => ({
       activeTab: 'simulator',
+      customPortfolio: [
+        { instrumentId: 'vwce', weight: 80 },
+        { instrumentId: 'edo', weight: 20 }
+      ],
       monthlyContribution: 500,
       currentAge: 30,
       retirementAge: 60,
@@ -119,6 +132,7 @@ export const useSimulatorStore = create<SimulatorState>()(
       aiLastResponse: null,
       aiError: null,
 
+      setCustomPortfolio: (items) => set({ customPortfolio: items }),
       setActiveTab: (val) => set({ activeTab: val }),
       setMonthlyContribution: (val) => set({ monthlyContribution: val }),
       setCurrentAge: (val) => set({ currentAge: val }),
@@ -183,6 +197,7 @@ export const useSimulatorStore = create<SimulatorState>()(
         retirementAge: data.retirementAge || data.retirement_age,
         inflationRate: data.inflationRate || data.inflation_rate,
         annualStepUp: data.annualStepUp || data.annual_step_up,
+        customPortfolio: data.customPortfolio || get().customPortfolio,
         coreRate: data.coreRate || data.core_rate,
         satRate: data.satRate || data.sat_rate,
         bondsRate: data.bondsRate || data.bonds_rate,
@@ -213,6 +228,7 @@ export const useSimulatorStore = create<SimulatorState>()(
           const engine = await import('engine');
           // @ts-ignore - generateMonteCarloData dynamically added in Iteration 30
           if (!engine.generateMonteCarloData) return;
+          const adapterParams = getDerivedWasmParams(state);
           
           const params = {
             monthlyContribution: state.monthlyContribution,
@@ -220,23 +236,23 @@ export const useSimulatorStore = create<SimulatorState>()(
             retirementAge: state.retirementAge,
             inflationRate: state.inflationRate,
             annualStepUp: state.annualStepUp,
-            coreRate: state.coreRate,
-            satRate: state.satRate,
-            bondsRate: state.bondsRate,
+            coreRate: adapterParams.coreRate,
+            satRate: adapterParams.satRate,
+            bondsRate: adapterParams.bondsRate,
             isCoreIke: state.isCoreIke,
             isSatIke: state.isSatIke,
             isBondsIke: state.isBondsIke,
             monthlyWithdrawal: state.activePhase === 'accumulation' ? 0 : state.monthlyWithdrawal,
             withdrawalYears: state.activePhase === 'accumulation' ? 0 : state.withdrawalYears,
-            coreVolatility: state.coreVolatility,
-            satVolatility: state.satVolatility,
-            bondsVolatility: state.bondsVolatility,
+            coreVolatility: adapterParams.coreVolatility,
+            satVolatility: adapterParams.satVolatility,
+            bondsVolatility: adapterParams.bondsVolatility,
             iterations: 1000,
             rebalancingStrategy: state.rebalancingStrategy,
           };
 
           // @ts-ignore
-          const result = await engine.generateMonteCarloData(params, state.customCoreWeight, state.customSatWeight);
+          const result = await engine.generateMonteCarloData(params, adapterParams.coreWeight, adapterParams.satWeight);
           
           // --- Twarda Izolacja Stanu (Hard State Isolation) ---
           // Jeśli jesteśmy w fazie akumulacji, interesuje nas wyłącznie szansa na zebranie kapitału.
@@ -308,3 +324,45 @@ export const useSimulatorStore = create<SimulatorState>()(
     }
   )
 );
+
+/**
+ * Adapter Translacyjny (Selector).
+ * Tłumaczy dynamiczny koszyk instrumentów na twarde zmienne, na których opiera się jądro WASM (3 Wiadra).
+ */
+export const getDerivedWasmParams = (state: SimulatorState) => {
+  let coreWeight = 0, satWeight = 0, bondsWeight = 0;
+  let coreCw = 0, satCw = 0, bondsCw = 0; // expectedCagr * weight
+  let coreVw = 0, satVw = 0, bondsVw = 0; // volatility * weight
+
+  state.customPortfolio.forEach(item => {
+    const inst = AVAILABLE_INSTRUMENTS.find(i => i.id === item.instrumentId);
+    if (!inst) return;
+
+    if (inst.category === 'Baza' || inst.category === 'Core') {
+      coreWeight += item.weight;
+      coreCw += inst.expectedCagr * item.weight;
+      coreVw += inst.volatility * item.weight;
+    } else if (inst.category === 'Bezpiecznik') {
+      bondsWeight += item.weight;
+      bondsCw += inst.expectedCagr * item.weight;
+      bondsVw += inst.volatility * item.weight;
+    } else {
+      // reszta: Tech, Krypto, Emerging
+      satWeight += item.weight;
+      satCw += inst.expectedCagr * item.weight;
+      satVw += inst.volatility * item.weight;
+    }
+  });
+
+  return {
+    coreWeight,
+    satWeight,
+    bondsWeight,
+    coreRate: coreWeight > 0 ? (coreCw / coreWeight) : 0,
+    satRate: satWeight > 0 ? (satCw / satWeight) : 0,
+    bondsRate: bondsWeight > 0 ? (bondsCw / bondsWeight) : 0,
+    coreVolatility: coreWeight > 0 ? (coreVw / coreWeight) : 0,
+    satVolatility: satWeight > 0 ? (satVw / satWeight) : 0,
+    bondsVolatility: bondsWeight > 0 ? (bondsVw / bondsWeight) : 0,
+  };
+};
