@@ -53,6 +53,23 @@ export default function App() {
         try {
           const adapterParams = getDerivedWasmParams(store);
           
+          // === DIAGNOSTIC LOG: WASM PAYLOAD INJECTION ===
+          console.log('[WASM PAYLOAD INJECTION]', {
+            coreWeight: adapterParams.coreWeight,
+            satWeight: adapterParams.satWeight,
+            bondsWeight: adapterParams.bondsWeight,
+            coreRate: adapterParams.coreRate,
+            satRate: adapterParams.satRate,
+            bondsRate: adapterParams.bondsRate,
+            coreVol: adapterParams.coreVolatility,
+            satVol: adapterParams.satVolatility,
+            bondsVol: adapterParams.bondsVolatility,
+            isCoreIke: adapterParams.isCoreIke,
+            isSatIke: adapterParams.isSatIke,
+            isBondsIke: adapterParams.isBondsIke,
+            sumWeights: adapterParams.coreWeight + adapterParams.satWeight + adapterParams.bondsWeight,
+          });
+
           const inputParams = { 
             monthlyContribution: store.monthlyContribution, 
             currentAge: store.currentAge, 
@@ -91,10 +108,8 @@ export default function App() {
       }
     }, [
       store.engineType, store.monthlyContribution, store.currentAge, store.retirementAge, store.inflationRate, 
-      store.annualStepUp, store.coreRate, store.satRate, store.bondsRate, 
-      store.isCoreIke, store.isSatIke, store.isBondsIke,
-      store.customCoreWeight, store.customSatWeight, store.monthlyWithdrawal, store.withdrawalYears,
-      store.coreVolatility, store.satVolatility, store.bondsVolatility, store.rebalancingStrategy
+      store.annualStepUp, store.customPortfolio, store.monthlyWithdrawal, store.withdrawalYears,
+      store.rebalancingStrategy
     ]);
   
     const activeScenario = simResults ? simResults[3] : null; 
