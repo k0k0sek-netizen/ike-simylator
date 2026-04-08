@@ -1,10 +1,11 @@
-# PROJECT IDENTITY: Kinetic Oracle
+# PROJECT IDENTITY: Kinetic Wealth
 
-## 🎯 1. Cel Główny
-**Kinetic Oracle** to zaawansowany, kinetyczny symulator emerytalny IKE/IKZE. Aplikacja działa w 100% lokalnie w przeglądarce (**Local-First**), oferując użytkownikom prywatność, zerowe opóźnienia i profesjonalne narzędzia analityczne znane z terminali finansowych.
+## O PROJEKCIE KINETIC WEALTH
+Kinetic Wealth to bezkompromisowy, wieloplatformowy Architekt Portfela Emerytalnego. Aplikacja łączy kinetyczny, industrialny interfejs z twardą zuchwałością narzędzia inwestycyjnego (tzw. "Boglehead na sterydach"). Narzędzie to zastępuje przerośnięte arkusze Excela, dostarczając brutalnie szczerych danych w oprawie premium.
 
-## 👥 2. Grupa Docelowa
-Projekt jest dedykowany dla **świadomych inwestorów**, którzy optymalizują obciążenia podatkowe i planują długoterminowe budowanie bogactwa. Użytkownik Kinetic Oracle szuka precyzji matematycznej, estetyki premium oraz narzędzi do bezpiecznego prognozowania fazy rentierskiej.
+## WIZJA
+Głównym celem "Kinetic Wealth" jest budowanie potężnych portfeli z użyciem twardych mechanizmów rynkowych (ETF, Obligacje, Krypto), zamiast opierania się na suwakach z abstrakcyjnymi stopami zwrotu.
+System stawia na deterministyczne projekcje kapitałowe oparte na wskaźniku optymizmu (WASM), uzupełnione przez asynchroniczny silnik prawdopodobieństwa (Monte Carlo) oraz zintegrowanego doradcę AI (Phantom AI Advisor). Wszystkie obliczenia matematyczne trzymane są blisko fizycznego sprzętu, a zapisywane - twardo i lokalnie.
 
 ## ⚙️ 3. Mechanika Biznesowa (DNA Projektu)
 *   **Faza Akumulacji**: Budowa kapitału poprzez miesięczne wpłaty, waloryzację (Annual Step-Up) i procent składany.

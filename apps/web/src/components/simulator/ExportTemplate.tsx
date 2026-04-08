@@ -134,10 +134,14 @@ export function ExportTemplate({ activeScenario }: { activeScenario: any }) {
           <span style={{ fontSize: '10px', color: '#908fa0', display: 'block', marginBottom: '2px' }}>WKŁAD WŁASNY TOTAL</span>
           <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#ffffff' }}>{formatCurrency(totalInvested)}</span>
         </div>
-        <div style={{ height: '30px', width: '1px', backgroundColor: '#2e3447' }} />
-        <div>
-          <span style={{ fontSize: '10px', color: '#908fa0', display: 'block', marginBottom: '2px' }}>RAMY CZASOWE</span>
-          <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#ffffff' }}>{store.currentAge} ➔ {store.retirementAge} lat</span>
+        <div className="flex flex-col items-center border border-[#334155] rounded-xl p-3 bg-[#0f172a]/50 shadow-md h-full justify-center">
+          <span className="text-[10px] font-bold tracking-[0.2em] text-[#94a3b8] uppercase mb-1">
+            Rejestr
+          </span>
+          <span className="font-black text-xs tracking-widest" style={{ color: '#ffffff' }}>
+            KINETIC WEALTH <span style={{ color: '#4edea3' }}>_</span>
+          </span>
+          <span className="text-[8px] font-bold text-[#64748b] tracking-wider uppercase">Architekt Portfela Emerytalnego</span>
         </div>
         <div style={{ height: '30px', width: '1px', backgroundColor: '#2e3447' }} />
         <div>

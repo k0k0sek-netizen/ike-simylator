@@ -13,7 +13,10 @@ export interface MonteCarloSummary {
   successRate: number;
 }
 
+export type AppTab = 'simulator' | 'builder' | 'history' | 'settings';
+
 export interface SimulatorState {
+  activeTab: AppTab;
   monthlyContribution: number;
   currentAge: number;
   retirementAge: number;
@@ -49,6 +52,7 @@ export interface SimulatorState {
   aiLastResponse: string | null;
   aiError: string | null;
 
+  setActiveTab: (tab: AppTab) => void;
   setMonthlyContribution: (val: number) => void;
   setCurrentAge: (val: number) => void;
   setRetirementAge: (val: number) => void;
@@ -81,6 +85,7 @@ export interface SimulatorState {
 export const useSimulatorStore = create<SimulatorState>()(
   persist(
     (set, get) => ({
+      activeTab: 'simulator',
       monthlyContribution: 500,
       currentAge: 30,
       retirementAge: 60,
@@ -114,6 +119,7 @@ export const useSimulatorStore = create<SimulatorState>()(
       aiLastResponse: null,
       aiError: null,
 
+      setActiveTab: (val) => set({ activeTab: val }),
       setMonthlyContribution: (val) => set({ monthlyContribution: val }),
       setCurrentAge: (val) => set({ currentAge: val }),
       setRetirementAge: (val) => set({ retirementAge: val }),
@@ -294,9 +300,9 @@ export const useSimulatorStore = create<SimulatorState>()(
       },
     }),
     {
-      name: 'kinetic-oracle-storage',
+      name: 'kinetic-wealth-storage',
       partialize: (state) => {
-        const { engineType, mcResultAccumulation, mcResultDecumulation, aiStatus, aiLastResponse, aiError, ...rest } = state;
+        const { engineType, activeTab, mcResultAccumulation, mcResultDecumulation, aiStatus, aiLastResponse, aiError, ...rest } = state;
         return rest;
       }
     }
