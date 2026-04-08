@@ -1,9 +1,18 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useSimulatorStore } from '../../store/useSimulatorStore';
 import { AVAILABLE_INSTRUMENTS } from '../../config/instruments';
 import { KineticTooltip } from '../ui/KineticTooltip';
 import { getDerivedWasmParams } from '../../store/useSimulatorStore';
+import type { PortfolioItem } from '../../store/useSimulatorStore';
+
+/**
+ * Sprawdza, czy dany instrument jest "Maklerski" (Baza, Core, Tech, Rynki Wschodzące, Krypto).
+ * Instrumenty maklerskie i EDO (Bezpiecznik) wykluczają się wzajemnie pod kątem IKE.
+ */
+function isMaklerskieCategory(category: string): boolean {
+  return category !== 'Bezpiecznik';
+}
 
 export function PortfolioBuilder() {
   const store = useSimulatorStore();
@@ -13,16 +22,31 @@ export function PortfolioBuilder() {
   const sumWeights = portfolio.reduce((sum, item) => sum + item.weight, 0);
   const isValid = sumWeights === 100;
 
-  // Pobranie danych agregacyjnych i przełożnienie ich do frontowych parametrów edukacyjnych
-  // na podstawie translacji adaptera Wasm, którą napisaliśmy.
-  // Adapter bierze stan całego store'a jako parametr, wiec budujemy minimalnego mocka
+  // Adapter result
   const adapterResult = useMemo(() => getDerivedWasmParams(store), [portfolio]);
+
+  // --- IKE Mutual Exclusion Logic ---
+  // Sprawdź, czy jakakolwiek pozycja maklerska ma IKE
+  const hasMaklerskieIke = useMemo(() => {
+    return portfolio.some(p => {
+      const inst = AVAILABLE_INSTRUMENTS.find(i => i.id === p.instrumentId);
+      return inst && isMaklerskieCategory(inst.category) && p.isIke === true;
+    });
+  }, [portfolio]);
+
+  // Sprawdź, czy EDO (Bezpiecznik) ma IKE
+  const hasBezpiecznikIke = useMemo(() => {
+    return portfolio.some(p => {
+      const inst = AVAILABLE_INSTRUMENTS.find(i => i.id === p.instrumentId);
+      return inst && inst.category === 'Bezpiecznik' && p.isIke === true;
+    });
+  }, [portfolio]);
 
   const toggleInstrument = (instrumentId: string) => {
     if (portfolio.some(p => p.instrumentId === instrumentId)) {
       store.setCustomPortfolio(portfolio.filter(p => p.instrumentId !== instrumentId));
     } else {
-      store.setCustomPortfolio([...portfolio, { instrumentId, weight: 0 }]);
+      store.setCustomPortfolio([...portfolio, { instrumentId, weight: 0, isIke: false }]);
     }
   };
 
@@ -32,8 +56,55 @@ export function PortfolioBuilder() {
     ));
   };
 
-  // Całkowite rzutowane parametry łącząc 3 wiadra silnika 
-  // (Core + Sat + Bonds) by je pokazać w UI summary.
+  const toggleIke = useCallback((instrumentId: string) => {
+    const inst = AVAILABLE_INSTRUMENTS.find(i => i.id === instrumentId);
+    if (!inst || !inst.isIkeEligible) return;
+
+    const pItem = portfolio.find(p => p.instrumentId === instrumentId);
+    if (!pItem) return;
+
+    const newIkeValue = !pItem.isIke;
+    const isMaklerskie = isMaklerskieCategory(inst.category);
+
+    let updatedPortfolio: PortfolioItem[];
+
+    if (newIkeValue) {
+      // Włączamy IKE dla tego instrumentu — wymuszamy wyłączenie IKE na wykluczonych
+      updatedPortfolio = portfolio.map(p => {
+        if (p.instrumentId === instrumentId) {
+          return { ...p, isIke: true };
+        }
+        const otherInst = AVAILABLE_INSTRUMENTS.find(i => i.id === p.instrumentId);
+        if (!otherInst) return p;
+
+        if (isMaklerskie && otherInst.category === 'Bezpiecznik') {
+          // Włączamy maklerskie IKE → wyłączamy bezpiecznik IKE
+          return { ...p, isIke: false };
+        }
+        if (!isMaklerskie && isMaklerskieCategory(otherInst.category)) {
+          // Włączamy bezpiecznik IKE → wyłączamy maklerskie IKE
+          return { ...p, isIke: false };
+        }
+        return p;
+      });
+    } else {
+      // Wyłączamy IKE
+      updatedPortfolio = portfolio.map(p =>
+        p.instrumentId === instrumentId ? { ...p, isIke: false } : p
+      );
+    }
+
+    store.setCustomPortfolio(updatedPortfolio);
+  }, [portfolio, store]);
+
+  // Przycisk "Uruchom Symulację"
+  const handleLaunchSimulation = useCallback(() => {
+    store.calculateMonteCarlo();
+    store.setActiveTab('simulator');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [store]);
+
+  // Parametry podsumowujące
   const totalCagr = ((adapterResult.coreRate * adapterResult.coreWeight) + 
                     (adapterResult.satRate * adapterResult.satWeight) + 
                     (adapterResult.bondsRate * adapterResult.bondsWeight)) / sumWeights || 0;
@@ -71,6 +142,12 @@ export function PortfolioBuilder() {
         {AVAILABLE_INSTRUMENTS.map((inst) => {
           const isSelected = portfolio.some(p => p.instrumentId === inst.id);
           const pItem = portfolio.find(p => p.instrumentId === inst.id);
+          const isMaklerskie = isMaklerskieCategory(inst.category);
+
+          // Blokada IKE: maklerskie blokowane gdy EDO ma IKE, i vice versa
+          const isIkeDisabled = !inst.isIkeEligible || 
+            (isMaklerskie && hasBezpiecznikIke) || 
+            (!isMaklerskie && hasMaklerskieIke);
 
           return (
             <motion.div 
@@ -96,7 +173,36 @@ export function PortfolioBuilder() {
                     <span className="text-[10px] text-slate-500 uppercase tracking-widest">{inst.category}</span>
                   </div>
                 </div>
-                {inst.isIkeEligible && <span className="px-2 py-0.5 rounded text-[8px] font-bold bg-secondary/10 text-secondary uppercase border border-secondary/20">Możliwe IKE</span>}
+
+                {/* === INTERAKTYWNY PRZEŁĄCZNIK IKE / BELKA === */}
+                {isSelected && inst.isIkeEligible && (
+                  <div className="flex bg-slate-100 dark:bg-gray-700/50 rounded-lg p-0.5 border border-outline-variant/10">
+                    <button 
+                      onClick={() => !isIkeDisabled && toggleIke(inst.id)}
+                      disabled={isIkeDisabled && !pItem?.isIke}
+                      className={`px-2.5 py-1 text-[8px] font-black uppercase rounded-md transition-all ${
+                        pItem?.isIke 
+                          ? 'bg-primary text-black shadow-lg shadow-primary/20' 
+                          : isIkeDisabled
+                            ? 'opacity-20 cursor-not-allowed text-slate-400'
+                            : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-white'
+                      }`}
+                    >
+                      IKE
+                    </button>
+                    <button 
+                      onClick={() => pItem?.isIke && toggleIke(inst.id)}
+                      className={`px-2.5 py-1 text-[8px] font-black uppercase rounded-md transition-all ${!pItem?.isIke ? 'bg-error text-white' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-white'}`}
+                    >
+                      BELKA
+                    </button>
+                  </div>
+                )}
+
+                {/* Badge dla niewybranych */}
+                {!isSelected && inst.isIkeEligible && (
+                  <span className="px-2 py-0.5 rounded text-[8px] font-bold bg-secondary/10 text-secondary uppercase border border-secondary/20">Możliwe IKE</span>
+                )}
               </div>
 
               {isSelected && (
@@ -117,19 +223,26 @@ export function PortfolioBuilder() {
         })}
       </div>
 
+      {/* === NOTA PRAWNA IKE === */}
+      <p className="text-[10px] leading-relaxed text-slate-500 dark:text-slate-400 italic px-1">
+        💡 <span className="font-bold text-primary/80">Prawo podatkowe:</span> W Polsce można posiadać tylko jedno konto IKE. 
+        Wybierz, czy tarcza podatkowa chroni rachunek maklerski (ETF/Krypto), czy obligacyjny (EDO). 
+        Wybranie jednego typu automatycznie blokuje drugi.
+      </p>
+
       {portfolio.length > 0 && isValid && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-8 p-4 sm:p-5 bg-slate-100 dark:bg-black/30 rounded-2xl border border-outline-variant/10">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="flex flex-col">
               <span className="text-[10px] uppercase text-slate-500 font-bold tracking-widest">Parametry Symulacji Silnika Oczekiwane (Zsumowane Wasm)</span>
               <div className="flex gap-6 mt-2">
-                <span className="text-sm font-black text-secondary">Zzysk: {totalCagr.toFixed(2)}%</span>
+                <span className="text-sm font-black text-secondary">Zysk: {totalCagr.toFixed(2)}%</span>
                 <span className="text-sm font-black text-amber-500">Zmienność σ: {totalVol.toFixed(2)}%</span>
               </div>
             </div>
             
             <button
-              onClick={() => store.setActiveTab('simulator')}
+              onClick={handleLaunchSimulation}
               className="px-6 py-3 bg-primary text-black rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 flex gap-2 items-center"
             >
               Uruchom Symulację

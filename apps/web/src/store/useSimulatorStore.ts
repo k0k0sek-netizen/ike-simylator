@@ -17,6 +17,7 @@ export interface MonteCarloSummary {
 export interface PortfolioItem {
   instrumentId: string;
   weight: number;
+  isIke?: boolean;
 }
 
 
@@ -96,8 +97,8 @@ export const useSimulatorStore = create<SimulatorState>()(
     (set, get) => ({
       activeTab: 'simulator',
       customPortfolio: [
-        { instrumentId: 'vwce', weight: 80 },
-        { instrumentId: 'edo', weight: 20 }
+        { instrumentId: 'vwce', weight: 80, isIke: true },
+        { instrumentId: 'edo', weight: 20, isIke: false }
       ],
       monthlyContribution: 500,
       currentAge: 30,
@@ -346,18 +347,18 @@ export const getDerivedWasmParams = (state: SimulatorState) => {
       coreWeight += item.weight;
       coreCw += inst.expectedCagr * item.weight;
       coreVw += inst.volatility * item.weight;
-      if (inst.isIkeEligible) hasCoreIke = true;
+      if (item.isIke) hasCoreIke = true;
     } else if (inst.category === 'Bezpiecznik') {
       bondsWeight += item.weight;
       bondsCw += inst.expectedCagr * item.weight;
       bondsVw += inst.volatility * item.weight;
-      if (inst.isIkeEligible) hasBondsIke = true;
+      if (item.isIke) hasBondsIke = true;
     } else {
       // reszta: Tech, Krypto, Emerging
       satWeight += item.weight;
       satCw += inst.expectedCagr * item.weight;
       satVw += inst.volatility * item.weight;
-      if (inst.isIkeEligible) hasSatIke = true;
+      if (item.isIke) hasSatIke = true;
     }
   });
 

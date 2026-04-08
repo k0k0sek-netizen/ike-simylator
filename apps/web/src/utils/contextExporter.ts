@@ -34,14 +34,7 @@ export function exportSimulationContext(): string {
     const inst = AVAILABLE_INSTRUMENTS.find(i => i.id === item.instrumentId);
     if (!inst) return `- Unknown (${item.instrumentId}): ${item.weight}%`;
     
-    let ikeStatus = "NIE";
-    if (inst.category === 'Baza' || inst.category === 'Core') {
-      ikeStatus = derivedParams.isCoreIke ? "TAK" : "NIE";
-    } else if (inst.category === 'Bezpiecznik') {
-      ikeStatus = derivedParams.isBondsIke ? "TAK" : "NIE";
-    } else {
-      ikeStatus = derivedParams.isSatIke ? "TAK" : "NIE";
-    }
+    const ikeStatus = item.isIke ? "TAK" : "NIE";
 
     return `- ${item.weight}% ${inst.ticker} (Kategoria: ${inst.category}, Tarcza IKE: ${ikeStatus})`;
   }).join('\n');
