@@ -176,62 +176,6 @@ export function ControlPanel({ phase, finalNominal }: ControlPanelProps) {
               </div>
             </div>
 
-            <div className="pt-6 border-t border-outline-variant/10">
-              <label className="text-[10px] font-label text-outline uppercase tracking-wider block mb-4">Typ konta (Tarcza IKE)</label>
-              <div className="space-y-3">
-                {[
-                  { 
-                    label: 'Świat (np. mBank/XTB)', 
-                    val: store.isCoreIke, 
-                    set: store.setIsCoreIke, 
-                    color: 'border-secondary/30 text-secondary',
-                    disabled: store.isBondsIke // Wykluczone przez IKE-Obligacje
-                  },
-                  { 
-                    label: 'Krypto (np. Bossa)', 
-                    val: store.isSatIke, 
-                    set: store.setIsSatIke, 
-                    color: 'border-amber-500/30 text-amber-500',
-                    disabled: store.isBondsIke // Wykluczone przez IKE-Obligacje
-                  },
-                  { 
-                    label: 'EDO (PKO BP)', 
-                    val: store.isBondsIke, 
-                    set: store.setIsBondsIke, 
-                    color: 'border-indigo-400/30 text-indigo-400',
-                    disabled: store.isCoreIke || store.isSatIke // Wykluczone przez IKE Maklerskie
-                  },
-                ].map((item, i) => (
-                  <div key={i} className="flex justify-between items-center">
-                    <span className={`text-[10px] font-bold uppercase ${item.color.split(' ')[1]}`}>{item.label}</span>
-                    <div className="flex bg-slate-100 dark:bg-gray-700/50 rounded-lg p-0.5 border border-outline-variant/10 hide-for-pdf">
-                      <button 
-                        onClick={() => !item.disabled && item.set(true)}
-                        disabled={item.disabled}
-                        className={`px-3 py-1 text-[9px] font-bold uppercase rounded-md transition-all ${
-                          item.val 
-                            ? 'bg-primary text-black shadow-lg shadow-primary/20' 
-                            : item.disabled
-                              ? 'opacity-20 cursor-not-allowed text-slate-400'
-                              : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-white'
-                        }`}
-                      >
-                        IKE
-                      </button>
-                      <button 
-                        onClick={() => item.set(false)}
-                        className={`px-3 py-1 text-[9px] font-bold uppercase rounded-md transition-all ${!item.val ? 'bg-error text-white' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-white'}`}
-                      >
-                        BELKA
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-4 text-[9px] leading-relaxed text-slate-500 italic border-t border-white/5 pt-3">
-                💡 <span className="font-bold text-primary/80">Info:</span> Akcje giełdowe i Kryptowaluty (ETN) mogą być trzymane wspólnie na jednym koncie IKE Maklerskim. Polskie prawo wyklucza jednak łączenie ich z dedykowanym kontem IKE-Obligacje (EDO).
-              </p>
-            </div>
 
             {/* === MONTE CARLO RISK SETTINGS === */}
             <div className="pt-4 border-t border-outline-variant/10">

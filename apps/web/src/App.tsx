@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { flushSync } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSimulatorStore } from './store/useSimulatorStore';
+import { useSimulatorStore, getDerivedWasmParams } from './store/useSimulatorStore';
 
 import { Header } from './components/layout/Header';
 import { BottomNav } from './components/layout/BottomNav';
@@ -51,23 +51,25 @@ export default function App() {
     useEffect(() => {
       if (store.engineType !== 'LOADING' && wasmModule.current) {
         try {
+          const adapterParams = getDerivedWasmParams(store);
+          
           const inputParams = { 
             monthlyContribution: store.monthlyContribution, 
             currentAge: store.currentAge, 
             retirementAge: store.retirementAge, 
             inflationRate: store.inflationRate, 
             annualStepUp: store.annualStepUp, 
-            coreRate: store.coreRate, 
-            satRate: store.satRate,
-            bondsRate: store.bondsRate,
-            isCoreIke: store.isCoreIke,
-            isSatIke: store.isSatIke,
-            isBondsIke: store.isBondsIke,
+            coreRate: adapterParams.coreRate, 
+            satRate: adapterParams.satRate,
+            bondsRate: adapterParams.bondsRate,
+            isCoreIke: adapterParams.isCoreIke,
+            isSatIke: adapterParams.isSatIke,
+            isBondsIke: adapterParams.isBondsIke,
             monthlyWithdrawal: store.monthlyWithdrawal,
             withdrawalYears: store.withdrawalYears,
-            coreVolatility: store.coreVolatility,
-            satVolatility: store.satVolatility,
-            bondsVolatility: store.bondsVolatility,
+            coreVolatility: adapterParams.coreVolatility,
+            satVolatility: adapterParams.satVolatility,
+            bondsVolatility: adapterParams.bondsVolatility,
             iterations: 1, // Deterministyczny używa 1 iteracji
             rebalancingStrategy: store.rebalancingStrategy,
           };
@@ -75,8 +77,8 @@ export default function App() {
           // Deterministyczne przeliczenie
           const results = wasmModule.current.generateMultipleScenarios(
             inputParams, 
-            store.customCoreWeight,
-            store.customSatWeight
+            adapterParams.coreWeight,
+            adapterParams.satWeight
           );
           
           setSimResults(results);

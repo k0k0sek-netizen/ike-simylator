@@ -239,9 +239,9 @@ export const useSimulatorStore = create<SimulatorState>()(
             coreRate: adapterParams.coreRate,
             satRate: adapterParams.satRate,
             bondsRate: adapterParams.bondsRate,
-            isCoreIke: state.isCoreIke,
-            isSatIke: state.isSatIke,
-            isBondsIke: state.isBondsIke,
+            isCoreIke: adapterParams.isCoreIke,
+            isSatIke: adapterParams.isSatIke,
+            isBondsIke: adapterParams.isBondsIke,
             monthlyWithdrawal: state.activePhase === 'accumulation' ? 0 : state.monthlyWithdrawal,
             withdrawalYears: state.activePhase === 'accumulation' ? 0 : state.withdrawalYears,
             coreVolatility: adapterParams.coreVolatility,
@@ -336,6 +336,7 @@ export const getDerivedWasmParams = (state: SimulatorState) => {
   let coreWeight = 0, satWeight = 0, bondsWeight = 0;
   let coreCw = 0, satCw = 0, bondsCw = 0; // expectedCagr * weight
   let coreVw = 0, satVw = 0, bondsVw = 0; // volatility * weight
+  let hasCoreIke = false, hasSatIke = false, hasBondsIke = false;
 
   state.customPortfolio.forEach(item => {
     const inst = AVAILABLE_INSTRUMENTS.find(i => i.id === item.instrumentId);
@@ -345,15 +346,18 @@ export const getDerivedWasmParams = (state: SimulatorState) => {
       coreWeight += item.weight;
       coreCw += inst.expectedCagr * item.weight;
       coreVw += inst.volatility * item.weight;
+      if (inst.isIkeEligible) hasCoreIke = true;
     } else if (inst.category === 'Bezpiecznik') {
       bondsWeight += item.weight;
       bondsCw += inst.expectedCagr * item.weight;
       bondsVw += inst.volatility * item.weight;
+      if (inst.isIkeEligible) hasBondsIke = true;
     } else {
       // reszta: Tech, Krypto, Emerging
       satWeight += item.weight;
       satCw += inst.expectedCagr * item.weight;
       satVw += inst.volatility * item.weight;
+      if (inst.isIkeEligible) hasSatIke = true;
     }
   });
 
@@ -367,5 +371,8 @@ export const getDerivedWasmParams = (state: SimulatorState) => {
     coreVolatility: coreWeight > 0 ? (coreVw / coreWeight) : 0,
     satVolatility: satWeight > 0 ? (satVw / satWeight) : 0,
     bondsVolatility: bondsWeight > 0 ? (bondsVw / bondsWeight) : 0,
+    isCoreIke: hasCoreIke,
+    isSatIke: hasSatIke,
+    isBondsIke: hasBondsIke,
   };
 };

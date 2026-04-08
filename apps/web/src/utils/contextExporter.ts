@@ -1,4 +1,4 @@
-import { useSimulatorStore } from '../store/useSimulatorStore';
+import { useSimulatorStore, getDerivedWasmParams } from '../store/useSimulatorStore';
 import { AVAILABLE_INSTRUMENTS } from '../config/instruments';
 
 /**
@@ -8,6 +8,7 @@ import { AVAILABLE_INSTRUMENTS } from '../config/instruments';
 export function exportSimulationContext(): string {
   // Pobieramy świeży, aktualny stan bezpośrednio ze Store, aby uniknąć problemu "stale closure"
   const state = useSimulatorStore.getState();
+  const derivedParams = getDerivedWasmParams(state);
   
   const {
     monthlyContribution,
@@ -15,9 +16,6 @@ export function exportSimulationContext(): string {
     retirementAge,
     inflationRate,
     customPortfolio,
-    isCoreIke,
-    isSatIke,
-    isBondsIke,
     rebalancingStrategy,
     mcResultAccumulation,
     mcResultDecumulation,
@@ -29,23 +27,23 @@ export function exportSimulationContext(): string {
   const strategyName = rebalancingStrategy === 1 ? "Twardy Roczny Rebalancing" : "Brak Rebalancingu";
   const horizon = retirementAge - currentAge;
 
-  const isMaklerskieIkeActive = isCoreIke || isSatIke;
+  const isMaklerskieIkeActive = derivedParams.isCoreIke || derivedParams.isSatIke;
 
   // Budowa listy instrumentów
   const portfolioDetails = customPortfolio.map(item => {
     const inst = AVAILABLE_INSTRUMENTS.find(i => i.id === item.instrumentId);
     if (!inst) return `- Unknown (${item.instrumentId}): ${item.weight}%`;
     
-    let ikeStatus = "BRAK IKE (19% PODATKU)";
+    let ikeStatus = "NIE";
     if (inst.category === 'Baza' || inst.category === 'Core') {
-      ikeStatus = isCoreIke ? "IKE AKTYWNE (0% PODATKU)" : "KONTO OPODATKOWANE";
+      ikeStatus = derivedParams.isCoreIke ? "TAK" : "NIE";
     } else if (inst.category === 'Bezpiecznik') {
-      ikeStatus = isBondsIke ? "IKE AKTYWNE (0% PODATKU)" : "KONTO OPODATKOWANE";
+      ikeStatus = derivedParams.isBondsIke ? "TAK" : "NIE";
     } else {
-      ikeStatus = isSatIke ? "IKE AKTYWNE (0% PODATKU)" : "KONTO OPODATKOWANE";
+      ikeStatus = derivedParams.isSatIke ? "TAK" : "NIE";
     }
 
-    return `- ${item.weight}% ${inst.ticker} (${inst.name}) | Kategoria: ${inst.category} | Podatki: ${ikeStatus}`;
+    return `- ${item.weight}% ${inst.ticker} (Kategoria: ${inst.category}, Tarcza IKE: ${ikeStatus})`;
   }).join('\n');
 
   let context = `--- KONTEKST SYMULACJI FINANSOWEJ (KINETIC WEALTH) ---
@@ -57,8 +55,8 @@ ${portfolioDetails}
 
 TARCZA PODATKOWA (GLOBALNA KONFIGURACJA):
 - Portfel Maklerski (Core/Sat): ${isMaklerskieIkeActive ? 'REJESTRACJA IKE' : 'KONTO ZWYKŁE'}
-- Portfel Obligacji (EDO): ${isBondsIke ? 'REJESTRACJA IKE-EDO' : 'KONTO ZWYKŁE'}
-- Status Prawny: ${isBondsIke && isMaklerskieIkeActive ? 'KRYTYCZNY BŁĄD PRAWNY: Dwa rodzaje IKE naraz!' : 'Poprawny'}
+- Portfel Obligacji (EDO): ${derivedParams.isBondsIke ? 'REJESTRACJA IKE-EDO' : 'KONTO ZWYKŁE'}
+- Status Prawny: ${derivedParams.isBondsIke && isMaklerskieIkeActive ? 'KRYTYCZNY BŁĄD PRAWNY: Dwa rodzaje IKE naraz!' : 'Poprawny'}
 
 STRATEGIA: ${strategyName}
 
