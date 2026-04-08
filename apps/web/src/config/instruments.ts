@@ -57,7 +57,7 @@ export const AVAILABLE_INSTRUMENTS: Instrument[] = [
     category: 'Krypto',
     expectedCagr: 25.0,
     volatility: 60,
-    isIkeEligible: false,
+    isIkeEligible: true,
     description: 'Fizyczny pokryty w 100% Bitcoin z giełdy niemieckiej Xetra. Ekstremalne ryzyko, potężna asymetria. Dodaj jako 1-5% zabezpieczenie i obserwuj fajerwerki.'
   },
   {
@@ -67,7 +67,7 @@ export const AVAILABLE_INSTRUMENTS: Instrument[] = [
     category: 'Bezpiecznik',
     expectedCagr: 6.0,
     volatility: 2,
-    isIkeEligible: false,
+    isIkeEligible: true,
     description: 'Bezpiecznik od Skarbu Państwa na wypadek absolutnej paniki na rynkach. Stabilnie pobija inflację, nie ulega tąpnięciom w czasach "Bessy". Prawny azyl.'
   }
 ];
