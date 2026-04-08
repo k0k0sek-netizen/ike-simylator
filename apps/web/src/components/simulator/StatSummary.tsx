@@ -25,8 +25,12 @@ export function StatSummary({ activeScenario, phase }: StatSummaryProps) {
 
   // Wartość realna, zysk netto i tarcza podatkowa — z momentu emerytury
   const finalReal = retirementData ? retirementData.realBalance : (activeScenario ? activeScenario.finalReal : 0);
-  const taxShield = retirementData ? retirementData.taxShield : (activeScenario ? activeScenario.taxShield : 0);
+  const taxShield = retirementData ? (retirementData.taxShield || 0) : (activeScenario ? activeScenario.taxShield || 0 : 0);
   const taxPaid = retirementData ? (retirementData.taxPaid || 0) : (activeScenario ? activeScenario.taxPaid || 0 : 0);
+  
+  // Do rozbicia na filary, potrzebujemy dokładnych danych z ostatniego roku (roku emerytury)
+  const lastYear = retirementData || (activeScenario?.yearlyData?.[activeScenario.yearlyData.length - 1] || {});
+
   const netProfit = retirementData ? retirementData.netProfit : (activeScenario ? activeScenario.netProfit : 0);
   const bankruptAge = activeScenario ? activeScenario.bankruptAge : null;
 
@@ -113,11 +117,15 @@ export function StatSummary({ activeScenario, phase }: StatSummaryProps) {
                 <span className="material-symbols-outlined text-primary dark:text-[#b721ff]" style={{ fontVariationSettings: "'FILL' 1" }}>gpp_good</span>
                 <p className="text-xs font-label text-slate-700 dark:text-[#e4b5ff] uppercase tracking-wider font-bold">Zaoszczędzony podatek Belki (19%)</p>
               </div>
-              <AnimatedCounter 
-                value={taxShield}
-                prefix="+"
-                className="text-xl font-headline font-black text-primary dark:text-[#b721ff] tracking-tighter" 
-              />
+              {taxShield ? (
+                <AnimatedCounter 
+                  value={taxShield}
+                  prefix="+"
+                  className="text-xl font-headline font-black text-primary dark:text-[#b721ff] tracking-tighter" 
+                />
+              ) : (
+                <span className="text-xl font-headline font-black text-primary dark:text-[#b721ff] tracking-tighter">+ 0 zł</span>
+              )}
             </div>
 
             {/* Paragon od Fiskusa — Zapłacony Podatek */}
@@ -146,14 +154,14 @@ export function StatSummary({ activeScenario, phase }: StatSummaryProps) {
                 {/* Szczegółowe rozbicie podatku (tylko jeśli podatek > 0) */}
                 {taxPaid > 0 && (
                   <div className="flex gap-2 text-[9px] font-label text-error/60 uppercase tracking-tighter">
-                    {activeScenario.taxPaidCore > 1 && (
-                      <span>Świat: {new Intl.NumberFormat('pl-PL').format(Math.round(activeScenario.taxPaidCore))} zł</span>
+                    {lastYear.taxPaidCore > 1 && (
+                      <span>Świat: {new Intl.NumberFormat('pl-PL').format(Math.round(lastYear.taxPaidCore))} zł</span>
                     )}
-                    {activeScenario.taxPaidSat > 1 && (
-                      <span>{activeScenario.taxPaidCore > 1 && "|"} Krypto: {new Intl.NumberFormat('pl-PL').format(Math.round(activeScenario.taxPaidSat))} zł</span>
+                    {lastYear.taxPaidSat > 1 && (
+                      <span>{lastYear.taxPaidCore > 1 && "|"} Krypto: {new Intl.NumberFormat('pl-PL').format(Math.round(lastYear.taxPaidSat))} zł</span>
                     )}
-                    {activeScenario.taxPaidBonds > 1 && (
-                      <span>{(activeScenario.taxPaidCore > 1 || activeScenario.taxPaidSat > 1) && "|"} EDO: {new Intl.NumberFormat('pl-PL').format(Math.round(activeScenario.taxPaidBonds))} zł</span>
+                    {lastYear.taxPaidBonds > 1 && (
+                      <span>{(lastYear.taxPaidCore > 1 || lastYear.taxPaidSat > 1) && "|"} EDO: {new Intl.NumberFormat('pl-PL').format(Math.round(lastYear.taxPaidBonds))} zł</span>
                     )}
                   </div>
                 )}
