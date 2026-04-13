@@ -82,6 +82,7 @@ pub struct MonteCarloSummary {
     pub points: Vec<MonteCarloPoint>,
     pub success_rate: f64,
     pub tax_paid_p50: f64,
+    pub tax_shield_p50: f64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -395,7 +396,7 @@ fn generate_scenario_internal(
             total_invested_nominal,
             total_invested_real,
             net_profit: if params.is_core_ike && params.is_sat_ike && params.is_bonds_ike { total_profit } else { total_profit - cumulative_tax_paid },
-            tax_shield: if params.is_core_ike { b_tax_theoretic } else { 0.0 },
+            tax_shield: (b_tax_theoretic - cumulative_tax_paid).max(0.0),
             tax_paid: cumulative_tax_paid,
         });
 
@@ -570,13 +571,13 @@ pub fn run_monte_carlo_engine(params: InputParams, core_pct: f64, sat_pct: f64) 
     
     let mut rng = SmallRng::from_entropy();
     
-    // Store final balances for each iteration at each year milestone
-    // Vec<year>[num_iterations]
     let mut year_milestones: Vec<Vec<f64>> = vec![Vec::with_capacity(params.iterations as usize); total_years as usize];
     let mut bankrupt_counts = 0;
     let mut total_tax_paid_acc = 0.0;
+    let mut total_theoretical_tax_acc = 0.0;
 
     for _ in 0..params.iterations {
+        // --- REAL SCENARIO (Current IKE settings) ---
         let mut core_nom = 0.0;
         let mut sat_nom = 0.0;
         let mut bonds_nom = 0.0;
@@ -585,125 +586,150 @@ pub fn run_monte_carlo_engine(params: InputParams, core_pct: f64, sat_pct: f64) 
         let mut bonds_base = 0.0;
         let mut total_tax_paid_in_iteration = 0.0;
         
+        // --- THEORETICAL SCENARIO (Shadow - No IKE) ---
+        let mut core_th = 0.0;
+        let mut sat_th = 0.0;
+        let mut bonds_th = 0.0;
+        let mut core_base_th = 0.0;
+        let mut sat_base_th = 0.0;
+        let mut bonds_base_th = 0.0;
+        let mut total_tax_th_in_iteration = 0.0;
+
         let mut current_monthly_pmt = params.monthly_contribution;
         let mut is_bankrupt = false;
+        let mut is_bankrupt_th = false;
 
         for y in 1..=total_years {
             let is_decumulation = y > years;
             
-            // Roczny Rebalancing (na początku roku symulacji, jeśli nie rok 1)
-            if params.rebalancing_strategy == 1 && y > 1 && !is_bankrupt {
-                let total_nom = core_nom + sat_nom + bonds_nom;
-                if total_nom > 0.0 {
-                    let mut current_total_tax = 0.0;
-                    
-                    // Oblicz podatek od nadwyżek (zdarzenie podatkowe sprzedaży)
-                    // Core
-                    let target_core = total_nom * (core_pct / 100.0);
-                    let diff_core = core_nom - target_core;
-                    if diff_core > 0.0 && !params.is_core_ike {
-                        let profit_ratio = if core_nom > 0.0 { (core_nom - core_base).max(0.0) / core_nom } else { 0.0 };
-                        let tax = diff_core * profit_ratio * 0.19;
-                        current_total_tax += tax;
+            // Roczny Rebalancing
+            if params.rebalancing_strategy == 1 && y > 1 {
+                // 1. Rebalancing dla REAL
+                if !is_bankrupt {
+                    let total_nom = core_nom + sat_nom + bonds_nom;
+                    if total_nom > 0.0 {
+                        let mut current_total_tax = 0.0;
+                        let target_core = total_nom * (core_pct / 100.0);
+                        if core_nom > target_core && !params.is_core_ike {
+                            let pr = if core_nom > 0.0 { (core_nom - core_base).max(0.0) / core_nom } else { 0.0 };
+                            current_total_tax += (core_nom - target_core) * pr * 0.19;
+                        }
+                        let target_sat = total_nom * (sat_pct / 100.0);
+                        if sat_nom > target_sat && !params.is_sat_ike {
+                            let pr = if sat_nom > 0.0 { (sat_nom - sat_base).max(0.0) / sat_nom } else { 0.0 };
+                            current_total_tax += (sat_nom - target_sat) * pr * 0.19;
+                        }
+                        let target_bonds = total_nom * (bonds_pct / 100.0);
+                        if bonds_nom > target_bonds && !params.is_bonds_ike {
+                            let pr = if bonds_nom > 0.0 { (bonds_nom - bonds_base).max(0.0) / bonds_nom } else { 0.0 };
+                            current_total_tax += (bonds_nom - target_bonds) * pr * 0.19;
+                        }
+                        let new_total = total_nom - current_total_tax;
+                        total_tax_paid_in_iteration += current_total_tax;
+                        core_nom = new_total * (core_pct / 100.0);
+                        sat_nom = new_total * (sat_pct / 100.0);
+                        bonds_nom = new_total * (bonds_pct / 100.0);
+                        core_base = core_nom; sat_base = sat_nom; bonds_base = bonds_nom;
                     }
-                    
-                    // Sat
-                    let target_sat = total_nom * (sat_pct / 100.0);
-                    let diff_sat = sat_nom - target_sat;
-                    if diff_sat > 0.0 && !params.is_sat_ike {
-                        let profit_ratio = if sat_nom > 0.0 { (sat_nom - sat_base).max(0.0) / sat_nom } else { 0.0 };
-                        let tax = diff_sat * profit_ratio * 0.19;
-                        current_total_tax += tax;
-                    }
+                }
 
-                    // Bonds
-                    let target_bonds = total_nom * (bonds_pct / 100.0);
-                    let diff_bonds = bonds_nom - target_bonds;
-                    if diff_bonds > 0.0 && !params.is_bonds_ike {
-                        let profit_ratio = if bonds_nom > 0.0 { (bonds_nom - bonds_base).max(0.0) / bonds_nom } else { 0.0 };
-                        let tax = diff_bonds * profit_ratio * 0.19;
-                        current_total_tax += tax;
+                // 2. Rebalancing dla THEORETICAL (zawsze liczymy podatek)
+                if !is_bankrupt_th {
+                    let total_th = core_th + sat_th + bonds_th;
+                    if total_th > 0.0 {
+                        let mut current_tax_th = 0.0;
+                        let target_core = total_th * (core_pct / 100.0);
+                        if core_th > target_core {
+                            let pr = if core_th > 0.0 { (core_th - core_base_th).max(0.0) / core_th } else { 0.0 };
+                            current_tax_th += (core_th - target_core) * pr * 0.19;
+                        }
+                        let target_sat = total_th * (sat_pct / 100.0);
+                        if sat_th > target_sat {
+                            let pr = if sat_th > 0.0 { (sat_th - sat_base_th).max(0.0) / sat_th } else { 0.0 };
+                            current_tax_th += (sat_th - target_sat) * pr * 0.19;
+                        }
+                        let target_bonds = total_th * (bonds_pct / 100.0);
+                        if bonds_th > target_bonds {
+                            let pr = if bonds_th > 0.0 { (bonds_th - bonds_base_th).max(0.0) / bonds_th } else { 0.0 };
+                            current_tax_th += (bonds_th - target_bonds) * pr * 0.19;
+                        }
+                        let new_total_th = total_th - current_tax_th;
+                        total_tax_th_in_iteration += current_tax_th;
+                        core_th = new_total_th * (core_pct / 100.0);
+                        sat_th = new_total_th * (sat_pct / 100.0);
+                        bonds_th = new_total_th * (bonds_pct / 100.0);
+                        core_base_th = core_th; sat_base_th = sat_th; bonds_base_th = bonds_th;
                     }
-
-                    // NOWY TOTAL PO PODATKU (fizyczne uszczuplenie portfela)
-                    let new_total_after_tax = total_nom - current_total_tax;
-                    total_tax_paid_in_iteration += current_total_tax;
-                    
-                    // Redystrybucja NETTO wg wag
-                    core_nom = new_total_after_tax * (core_pct / 100.0);
-                    sat_nom = new_total_after_tax * (sat_pct / 100.0);
-                    bonds_nom = new_total_after_tax * (bonds_pct / 100.0);
-                    
-                    // Reset bazy kosztowej po rebalansingu (zdarzenie zamknięte)
-                    core_base = core_nom;
-                    sat_base = sat_nom;
-                    bonds_base = bonds_nom;
                 }
             }
 
             for _m in 1..=12 {
-                if is_bankrupt { break; }
-                
-                // 1. Losowe stopy
                 let r_core = get_monthly_random_return(params.core_rate + params.inflation_rate, params.core_volatility, &mut rng);
                 let r_sat = get_monthly_random_return(params.sat_rate + params.inflation_rate, params.sat_volatility, &mut rng);
                 let r_bonds = get_monthly_random_return(params.bonds_rate + params.inflation_rate, params.bonds_volatility, &mut rng);
 
-                // 2. Naliczenie odsetek nominalnych
-                core_nom *= 1.0 + r_core;
-                sat_nom *= 1.0 + r_sat;
-                bonds_nom *= 1.0 + r_bonds;
+                if !is_bankrupt {
+                    core_nom *= 1.0 + r_core; sat_nom *= 1.0 + r_sat; bonds_nom *= 1.0 + r_bonds;
+                }
+                if !is_bankrupt_th {
+                    core_th *= 1.0 + r_core; sat_th *= 1.0 + r_sat; bonds_th *= 1.0 + r_bonds;
+                }
 
-                // 3. Przepływy
                 if !is_decumulation {
                     let p_core = current_monthly_pmt * (core_pct / 100.0);
                     let p_sat = current_monthly_pmt * (sat_pct / 100.0);
                     let p_bonds = current_monthly_pmt * (bonds_pct / 100.0);
                     
-                    core_nom += p_core;
-                    sat_nom += p_sat;
-                    bonds_nom += p_bonds;
+                    core_nom += p_core; sat_nom += p_sat; bonds_nom += p_bonds;
+                    core_base += p_core; sat_base += p_sat; bonds_base += p_bonds;
                     
-                    core_base += p_core;
-                    sat_base += p_sat;
-                    bonds_base += p_bonds;
+                    core_th += p_core; sat_th += p_sat; bonds_th += p_bonds;
+                    core_base_th += p_core; sat_base_th += p_sat; bonds_base_th += p_bonds;
                 } else {
-                    let total_n = core_nom + sat_nom + bonds_nom;
                     let withdrawal = params.monthly_withdrawal.abs();
-                    
+                    // REAL
+                    let total_n = core_nom + sat_nom + bonds_nom;
                     if total_n <= withdrawal {
                         core_nom = 0.0; sat_nom = 0.0; bonds_nom = 0.0;
-                        is_bankrupt = true;
-                        bankrupt_counts += 1;
+                        if !is_bankrupt { bankrupt_counts += 1; is_bankrupt = true; }
                     } else {
                         let cw = core_nom / total_n;
                         let sw = sat_nom / total_n;
                         let bw = bonds_nom / total_n;
-                        core_nom -= withdrawal * cw;
-                        sat_nom -= withdrawal * sw;
-                        bonds_nom -= withdrawal * bw;
+                        core_nom -= withdrawal * cw; sat_nom -= withdrawal * sw; bonds_nom -= withdrawal * bw;
+                    }
+                    // THEORETICAL
+                    let total_th = core_th + sat_th + bonds_th;
+                    if total_th <= withdrawal {
+                        core_th = 0.0; sat_th = 0.0; bonds_th = 0.0;
+                        is_bankrupt_th = true;
+                    } else {
+                        let cw = core_th / total_th;
+                        let sw = sat_th / total_th;
+                        let bw = bonds_th / total_th;
+                        core_th -= withdrawal * cw; sat_th -= withdrawal * sw; bonds_th -= withdrawal * bw;
                     }
                 }
             }
-
             year_milestones[(y - 1) as usize].push((core_nom + sat_nom + bonds_nom).max(0.0));
-            if !is_decumulation {
-                current_monthly_pmt *= 1.0 + params.annual_step_up / 100.0;
-            }
+            if !is_decumulation { current_monthly_pmt *= 1.0 + params.annual_step_up / 100.0; }
         }
         
-        // Final tax for this iteration (residual)
-        let final_unrealized_profit = (core_nom - core_base).max(0.0) * (if params.is_core_ike { 0.0 } else { 1.0 })
-                                    + (sat_nom - sat_base).max(0.0) * (if params.is_sat_ike { 0.0 } else { 1.0 })
-                                    + (bonds_nom - bonds_base).max(0.0) * (if params.is_bonds_ike { 0.0 } else { 1.0 });
-        total_tax_paid_acc += total_tax_paid_in_iteration + (final_unrealized_profit * 0.19);
+        // Final residual tax for this iteration
+        let final_profit = (core_nom - core_base).max(0.0) * (if params.is_core_ike { 0.0 } else { 0.19 })
+                         + (sat_nom - sat_base).max(0.0) * (if params.is_sat_ike { 0.0 } else { 0.19 })
+                         + (bonds_nom - bonds_base).max(0.0) * (if params.is_bonds_ike { 0.0 } else { 0.19 });
+        total_tax_paid_acc += total_tax_paid_in_iteration + final_profit;
+
+        let final_profit_th = (core_th - core_base_th).max(0.0) * 0.19
+                            + (sat_th - sat_base_th).max(0.0) * 0.19
+                            + (bonds_th - bonds_base_th).max(0.0) * 0.19;
+        total_theoretical_tax_acc += total_tax_th_in_iteration + final_profit_th;
     }
 
-    // Agregacja percentyli
     let points: Vec<MonteCarloPoint> = year_milestones.iter().enumerate().map(|(i, values)| {
         let mut sorted = values.clone();
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-        
         let len = sorted.len();
         MonteCarloPoint {
             year: (i + 1) as i32,
@@ -717,6 +743,7 @@ pub fn run_monte_carlo_engine(params: InputParams, core_pct: f64, sat_pct: f64) 
         points,
         success_rate: 1.0 - (bankrupt_counts as f64 / params.iterations as f64),
         tax_paid_p50: total_tax_paid_acc / params.iterations as f64,
+        tax_shield_p50: (total_theoretical_tax_acc - total_tax_paid_acc).max(0.0) / params.iterations as f64,
     }
 }
 
@@ -758,6 +785,41 @@ mod tests {
 
         println!("FINAL IKE: {}, FINAL BELKA: {}", final_ike, final_taxable);
         assert!(final_ike > final_taxable + 1000.0);
+    }
+
+    #[test]
+    fn test_monte_carlo_tax_shield() {
+        let params = InputParams {
+            monthly_contribution: 1000.0,
+            current_age: 30,
+            retirement_age: 40, // 10 lat akumulacji
+            inflation_rate: 0.0,
+            annual_step_up: 0.0,
+            core_rate: 10.0, // Wysoki zysk
+            sat_rate: 0.0,
+            bonds_rate: 0.0,
+            is_core_ike: true, // IKE Aktywne
+            is_sat_ike: false,
+            is_bonds_ike: false,
+            monthly_withdrawal: 0.0,
+            withdrawal_years: 0,
+            core_volatility: 0.0, // Deterministyczne dla testów
+            sat_volatility: 0.0,
+            bonds_volatility: 0.0,
+            iterations: 1,
+            rebalancing_strategy: 0,
+        };
+
+        let result = run_monte_carlo_engine(params, 100.0, 0.0);
+        
+        // Przy IKE = true:
+        // 1. Zapłacony podatek powinien wynosić 0.
+        // 2. Zaoszczędzony podatek (tax_shield) powinien być > 0.
+        assert_eq!(result.tax_paid_p50, 0.0);
+        // Spodziewany zysk: 1000 * 12 * 10 * (compound interest) -> ok 120k wpłat, spory zysk.
+        // Podatek Belki (19%) będzie znaczący.
+        
+        assert!(result.tax_shield_p50 > 1000.0, "Tarcza powinna być dodatnia, a jest {}", result.tax_shield_p50);
     }
 }
 

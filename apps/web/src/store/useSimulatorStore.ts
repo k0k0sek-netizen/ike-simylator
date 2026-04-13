@@ -12,6 +12,8 @@ export interface MonteCarloPoint {
 export interface MonteCarloSummary {
   points: MonteCarloPoint[];
   successRate: number;
+  taxPaidP50: number;
+  taxShieldP50: number;
 }
 
 export interface PortfolioItem {
