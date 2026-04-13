@@ -25,13 +25,18 @@ export function StatSummary({ activeScenario, phase }: StatSummaryProps) {
 
   // Wartość realna, zysk netto i tarcza podatkowa — z momentu emerytury
   const finalReal = retirementData ? retirementData.realBalance : (activeScenario ? activeScenario.finalReal : 0);
-  const taxShield = retirementData ? (retirementData.taxShield || 0) : (activeScenario ? activeScenario.taxShield || 0 : 0);
-  const taxPaid = retirementData ? (retirementData.taxPaid || 0) : (activeScenario ? activeScenario.taxPaid || 0 : 0);
+  // Prefer Monte Carlo results for tax calculations if available
+  const mcAccumulation = store.mcResultAccumulation;
+  const mcDecumulation = store.mcResultDecumulation;
+  const currentMc = phase === 'accumulation' ? mcAccumulation : mcDecumulation;
+  
+  const taxShield = currentMc?.taxShieldP50 ?? (retirementData ? (retirementData.taxShield || 0) : (activeScenario ? activeScenario.taxShield || 0 : 0));
+  const taxPaid = currentMc?.taxPaidP50 ?? (retirementData ? (retirementData.taxPaid || 0) : (activeScenario ? activeScenario.taxPaid || 0 : 0));
   
   // Do rozbicia na filary, potrzebujemy dokładnych danych z ostatniego roku (roku emerytury)
   const lastYear = retirementData || (activeScenario?.yearlyData?.[activeScenario.yearlyData.length - 1] || {});
 
-  const netProfit = retirementData ? retirementData.netProfit : (activeScenario ? activeScenario.netProfit : 0);
+  const netProfit = currentMc ? (currentMc.points[currentMc.points.length - 1].p50 - investedAtRetirement) : (retirementData ? retirementData.netProfit : (activeScenario ? activeScenario.netProfit : 0));
   const bankruptAge = activeScenario ? activeScenario.bankruptAge : null;
 
   // Dane końcowe scenariusza (po dekumulacji)
