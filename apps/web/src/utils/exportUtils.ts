@@ -1,4 +1,4 @@
-import { toPng } from 'html-to-image';
+import { toJpeg } from 'html-to-image';
 
 /**
  * exportToIsolatedPNG - Generowanie obrazu PNG (Social Wrapped) z ukrytego szablonu.
@@ -18,15 +18,21 @@ export async function exportToIsolatedPNG(scenario: any) {
   element.style.opacity = '1';
 
   try {
-    const dataUrl = await toPng(element, {
+    // PROBLEM 1: Rozjazd danych (Stale State / Rendering Race Condition)
+    // Czekamy na przerysowanie (repaint) DOM używając najprostszej blokady czasowej.
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // PROBLEM 2: Zbyt duży rozmiar pliku (zamiana toPng na toJpeg z zachowaniem pixelRatio)
+    const dataUrl = await toJpeg(element, {
       pixelRatio: 2, // Zapewnia wysoką rozdzielczość (Retina)
+      quality: 0.95,
       backgroundColor: '#0c1324',
     });
     
     // Tworzymy link do pobrania pliku
     const link = document.createElement('a');
     const timestamp = new Date().toISOString().slice(0, 10);
-    link.download = `KineticOracle-${(scenario.title || 'Wrapped').replace(/\s+/g, '-')}-${timestamp}.png`;
+    link.download = `KineticOracle-${(scenario.title || 'Wrapped').replace(/\s+/g, '-')}-${timestamp}.jpg`;
     link.href = dataUrl;
     link.click();
   } catch (err) {

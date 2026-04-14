@@ -1,4 +1,4 @@
-import { toPng } from 'html-to-image';
+import { toJpeg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 
 /**
@@ -17,10 +17,17 @@ export async function triggerPrint(elementId: string = 'export-template') {
   element.style.opacity = '1';
 
   try {
-    // Generowanie zrzutu z ukrytego szablonu (używa SVG -> Canvas dla wsparcia nowoczesnego CSS)
-    // Używamy pixelRatio: 2 dla lepszej jakości (High DPI)
-    const dataUrl = await toPng(element, {
+    // PROBLEM 1: Rozjazd danych (Stale State / Rendering Race Condition)
+    // Czekamy chwilę po odkryciu elementu, aby React zdążył domontować i przerysować 
+    // widok z aktualnymi danymi ze statu przed przechwyceniem zrzutu ekranu.
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // PROBLEM 2: Gigantyczny rozmiar pliku PDF (Bloat)
+    // Zmieniamy toPng na toJpeg (z kompresją 0.90) aby wyeliminować gigantyczne pliki
+    // przy jednoczesnym zachowaniu pixelRatio: 2 dla ostrych tekstów.
+    const dataUrl = await toJpeg(element, {
       pixelRatio: 2,
+      quality: 0.90,
       backgroundColor: '#0c1324',
     });
 
@@ -33,14 +40,16 @@ export async function triggerPrint(elementId: string = 'export-template') {
     const pageHeight = 297;
     const imgHeight = imgWidth * ratio;
     
-    // Tworzymy dokument PDF. Jeśli obraz jest dłuższy niż A4, tworzymy długą stronę (Infographic style)
+    // Tworzymy dokument PDF. Z włączoną natywną kompresją jsPDF.
     const pdf = new jsPDF({
       orientation: 'p',
       unit: 'mm',
-      format: imgHeight > pageHeight ? [imgWidth, imgHeight] : 'a4'
+      format: imgHeight > pageHeight ? [imgWidth, imgHeight] : 'a4',
+      compress: true
     });
 
-    pdf.addImage(dataUrl, 'PNG', 0, 0, imgWidth, imgHeight);
+    // Wstawiamy skompresowany JPEG zamiast PNG
+    pdf.addImage(dataUrl, 'JPEG', 0, 0, imgWidth, imgHeight);
     
     // Nazwa pliku z datą dla profesjonalnego efektu
     const timestamp = new Date().toISOString().slice(0, 10);
