@@ -1,7 +1,7 @@
 /**
  * AllocationDonut - Wersja ultra-sterylna (Opcja Nuklearna).
  * Usuwamy framer-motion oraz wszystkie klasy Tailwind powiązane z kolorami,
- * aby uniknąć błędów parsera html2canvas (brak obsługi oklab w v4).
+ * aby uniknąć błędów parsera html-to-image (brak obsługi oklab w formacie eksportu SVG/obiektów).
  */
 interface AllocationDonutProps {
   core: number;

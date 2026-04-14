@@ -1,8 +1,8 @@
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 
 /**
  * exportToIsolatedPNG - Generowanie obrazu PNG (Social Wrapped) z ukrytego szablonu.
- * Silnik html2canvas celuje w #export-template dając czytelny, profesjonalny obraz.
+ * Silnik html-to-image celuje w #export-template dając czytelny, profesjonalny obraz (obsługa CSS w SVG foreignObject).
  */
 export async function exportToIsolatedPNG(scenario: any) {
   const element = document.getElementById('export-template');
@@ -18,20 +18,16 @@ export async function exportToIsolatedPNG(scenario: any) {
   element.style.opacity = '1';
 
   try {
-    const canvas = await html2canvas(element, {
-      scale: 2, // Zapewnia wysoką rozdzielczość (Retina)
-      useCORS: true,
+    const dataUrl = await toPng(element, {
+      pixelRatio: 2, // Zapewnia wysoką rozdzielczość (Retina)
       backgroundColor: '#0c1324',
-      logging: false,
     });
-
-    const imgData = canvas.toDataURL('image/png');
     
     // Tworzymy link do pobrania pliku
     const link = document.createElement('a');
     const timestamp = new Date().toISOString().slice(0, 10);
     link.download = `KineticOracle-${(scenario.title || 'Wrapped').replace(/\s+/g, '-')}-${timestamp}.png`;
-    link.href = imgData;
+    link.href = dataUrl;
     link.click();
   } catch (err) {
     console.error('[exportUtils] Błąd eksportu PNG:', err);

@@ -16,7 +16,6 @@
     "engine": "file:../../packages/engine/pkg",
     "framer-motion": "^12.38.0",
     "html-to-image": "^1.11.13",
-    "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "lightweight-charts": "^5.1.0",
     "qrcode.react": "^4.2.0",

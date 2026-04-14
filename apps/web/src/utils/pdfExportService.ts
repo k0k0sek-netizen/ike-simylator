@@ -1,9 +1,9 @@
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 
 /**
  * triggerPrint - Generowanie raportu PDF przy użyciu wzorca Off-screen Template.
- * Wykorzystuje html2canvas do zrzutu ukrytego komponentu oraz jsPDF do zapisu pliku.
+ * Wykorzystuje html-to-image do zrzutu ukrytego komponentu oraz jsPDF do zapisu pliku.
  */
 export async function triggerPrint(elementId: string = 'export-template') {
   const element = document.getElementById(elementId);
@@ -17,30 +17,30 @@ export async function triggerPrint(elementId: string = 'export-template') {
   element.style.opacity = '1';
 
   try {
-    // Generowanie canvasu z ukrytego szablonu
-    // Używamy scale: 2 dla lepszej jakości (High DPI)
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
+    // Generowanie zrzutu z ukrytego szablonu (używa SVG -> Canvas dla wsparcia nowoczesnego CSS)
+    // Używamy pixelRatio: 2 dla lepszej jakości (High DPI)
+    const dataUrl = await toPng(element, {
+      pixelRatio: 2,
       backgroundColor: '#0c1324',
-      logging: false,
     });
 
-    const imgData = canvas.toDataURL('image/png');
+    // Pobieramy wymiary elementu z DOM aby poprawnie zachować aspect ratio
+    const rect = element.getBoundingClientRect();
+    const ratio = rect.width ? (rect.height / rect.width) : 1;
     
     // Proporcje A4: 210mm x 297mm
     const imgWidth = 210; 
     const pageHeight = 297;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const imgHeight = imgWidth * ratio;
     
     // Tworzymy dokument PDF. Jeśli obraz jest dłuższy niż A4, tworzymy długą stronę (Infographic style)
     const pdf = new jsPDF({
-      orientation: imgHeight > pageHeight ? 'p' : 'p',
+      orientation: 'p',
       unit: 'mm',
       format: imgHeight > pageHeight ? [imgWidth, imgHeight] : 'a4'
     });
 
-    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+    pdf.addImage(dataUrl, 'PNG', 0, 0, imgWidth, imgHeight);
     
     // Nazwa pliku z datą dla profesjonalnego efektu
     const timestamp = new Date().toISOString().slice(0, 10);

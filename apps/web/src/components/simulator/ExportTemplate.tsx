@@ -12,7 +12,7 @@ import {
 
 /**
  * ExportTemplate - Wersja ultra-sterylna (MIGRACJA SVG).
- * Używamy Recharts zamiast InteractiveChart, aby uniknąć błędów Canvas w html2canvas.
+ * Używamy Recharts zamiast InteractiveChart, aby uniknąć błędów Canvas w html-to-image.
  */
 export function ExportTemplate({ activeScenario }: { activeScenario: any }) {
   const store = useSimulatorStore();
