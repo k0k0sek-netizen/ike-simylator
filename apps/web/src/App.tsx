@@ -137,15 +137,23 @@ export default function App() {
     const retirementData = activeScenario?.yearlyData?.find((d: any) => d.year === years);
     const capitalAtRetirement = retirementData ? retirementData.nominalBalance : 0;
   
+    const [exportSnapshot, setExportSnapshot] = useState<any>(null);
+
     const handlePrint = async () => {
       if (activeScenario) {
-        await triggerPrint('export-template');
+        setExportSnapshot({ activeScenario: chartScenario || activeScenario, store: store });
+        setTimeout(async () => {
+          await triggerPrint('export-template');
+        }, 100);
       }
     };
   
     const handleExportPNG = async () => {
       if (activeScenario) {
-        await exportToIsolatedPNG(activeScenario);
+        setExportSnapshot({ activeScenario: chartScenario || activeScenario, store: store });
+        setTimeout(async () => {
+          await exportToIsolatedPNG(activeScenario);
+        }, 100);
       }
     };
   
@@ -357,8 +365,8 @@ export default function App() {
       />
       <BottomNav />
       
-      {/* EXPORT TEMPLATE (Off-screen) */}
-      <ExportTemplate activeScenario={activeScenario} />
+      {/* EXPORT TEMPLATE (Off-screen, Data injected on click) */}
+      <ExportTemplate snapshot={exportSnapshot} />
       
       <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
     </motion.div>

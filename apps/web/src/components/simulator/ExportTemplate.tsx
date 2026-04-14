@@ -1,4 +1,3 @@
-import { useSimulatorStore } from '../../store/useSimulatorStore';
 import { AllocationDonut } from '../ui/AllocationDonut';
 import { useMemo } from 'react';
 import { 
@@ -14,8 +13,24 @@ import {
  * ExportTemplate - Wersja ultra-sterylna (MIGRACJA SVG).
  * Używamy Recharts zamiast InteractiveChart, aby uniknąć błędów Canvas w html-to-image.
  */
-export function ExportTemplate({ activeScenario }: { activeScenario: any }) {
-  const store = useSimulatorStore();
+export function ExportTemplate({ snapshot }: { snapshot: any }) {
+  // Brak subskrypcji do useSimulatorStore - wymuszamy Prop Drilling (Snapshot)
+  
+  // Jeśli brak danych (szablon zamontowany, ale czekający na kliknięcie eksportu)
+  if (!snapshot) {
+    return (
+      <div 
+        id="export-template"
+        className="fixed top-[-9999px] left-[-9999px] opacity-0 pointer-events-none"
+        style={{ width: '1000px', padding: '60px', backgroundColor: '#0c1324' }}
+      />
+    );
+  }
+
+  const { activeScenario, store } = snapshot;
+  
+  // Zdebuguj przepływ danych:
+  console.log('EXPORT DATA:', { activeScenario, store });
 
   const isAccumulation = store.activePhase === 'accumulation';
   const years = Math.max(1, store.retirementAge - store.currentAge);
@@ -72,18 +87,13 @@ export function ExportTemplate({ activeScenario }: { activeScenario: any }) {
   return (
     <div 
       id="export-template"
+      className="fixed top-[-9999px] left-[-9999px] opacity-0 pointer-events-none"
       style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
         width: '1000px', // Szeroki arkusz A4
         padding: '60px',
         backgroundColor: '#0c1324',
         color: '#dce1fb',
         fontFamily: "'Space Grotesk', sans-serif",
-        zIndex: -9999,
-        opacity: 0.01,
-        pointerEvents: 'none',
       }}
     >
       {/* NAGŁÓWEK */}
