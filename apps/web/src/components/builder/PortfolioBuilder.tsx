@@ -236,7 +236,9 @@ export function PortfolioBuilder() {
             <div className="flex flex-col">
               <span className="text-[10px] uppercase text-slate-500 font-bold tracking-widest">Parametry Symulacji Silnika Oczekiwane (Zsumowane Wasm)</span>
               <div className="flex gap-6 mt-2">
-                <span className="text-sm font-black text-secondary">Zysk: {totalCagr.toFixed(2)}%</span>
+                <span className="text-sm font-black text-secondary">
+                  Zysk: {totalCagr.toFixed(2)}% <span className="text-[9px] text-slate-500 font-normal uppercase tracking-widest">(przed inflacją)</span>
+                </span>
                 <span className="text-sm font-black text-amber-500">Zmienność σ: {totalVol.toFixed(2)}%</span>
               </div>
             </div>

@@ -37,8 +37,8 @@ export function ExportTemplate({ snapshot }: { snapshot: any }) {
           position: 'absolute', 
           top: 0, 
           left: 0, 
-          zIndex: -9999, 
-          width: '100%', 
+          zIndex: -9999,
+          width: '1024px', 
           padding: '60px', 
           backgroundColor: '#0c1324', 
           opacity: 1 
@@ -113,7 +113,7 @@ export function ExportTemplate({ snapshot }: { snapshot: any }) {
         top: 0,
         left: 0,
         zIndex: -9999,
-        width: '100%',
+        width: '1024px',
         padding: '60px',
         backgroundColor: '#0c1324',
         color: '#dce1fb',
@@ -317,7 +317,7 @@ export function ExportTemplate({ snapshot }: { snapshot: any }) {
             strokeWidth={30}
           />
         </div>
-        <div className="w-full overflow-x-auto">
+        <div className="w-full">
           <table style={{ width: '100%', minWidth: '280px', borderCollapse: 'collapse', fontSize: '11px', marginTop: '40px' }}>
             <thead>
               <tr style={{ textAlign: 'left', color: '#908fa0', borderBottom: '1px solid #23293c' }}>
@@ -325,7 +325,7 @@ export function ExportTemplate({ snapshot }: { snapshot: any }) {
                 <th style={{ paddingBottom: '10px', fontWeight: 'normal', textAlign: 'center' }}>%</th>
                 <th style={{ paddingBottom: '10px', fontWeight: 'normal', textAlign: 'center' }}>
                   ZYSK
-                  <span className="text-[9px] text-[#64748b] font-normal block mt-1">(Nominalny)</span>
+                  <span className="text-[9px] text-[#64748b] font-normal block mt-1">(przed inflacją)</span>
                 </th>
                 <th style={{ paddingBottom: '10px', fontWeight: 'normal', textAlign: 'right' }}>TARCZA</th>
               </tr>
