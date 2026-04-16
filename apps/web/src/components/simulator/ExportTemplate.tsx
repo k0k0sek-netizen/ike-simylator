@@ -304,9 +304,9 @@ export function ExportTemplate({ snapshot }: { snapshot: any }) {
         </div>
       </div>
 
-      {/* ALOKACJA (Side by Side) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '30px', marginBottom: '30px', backgroundColor: '#151b2d', padding: '30px', borderRadius: '16px', border: '1px solid #23293c' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      {/* ALOKACJA (Mobile First) */}
+      <div className="flex flex-col lg:flex-row items-center lg:items-start gap-8 mb-8 bg-[#151b2d] p-8 rounded-2xl border border-[#23293c]">
+        <div className="flex flex-col items-center w-full lg:w-auto shrink-0">
           <p style={{ marginBottom: '20px', fontSize: '12px', fontWeight: 'bold', color: '#908fa0', alignSelf: 'flex-start' }}>ALOKACJA PORTFELA</p>
           <AllocationDonut 
             segments={snapshot.store.customPortfolio.map((item: any) => {
@@ -321,13 +321,16 @@ export function ExportTemplate({ snapshot }: { snapshot: any }) {
             strokeWidth={30}
           />
         </div>
-        <div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', marginTop: '40px' }}>
+        <div className="w-full overflow-x-auto">
+          <table style={{ width: '100%', minWidth: '280px', borderCollapse: 'collapse', fontSize: '11px', marginTop: '40px' }}>
             <thead>
               <tr style={{ textAlign: 'left', color: '#908fa0', borderBottom: '1px solid #23293c' }}>
                 <th style={{ paddingBottom: '10px', fontWeight: 'normal' }}>AKTYWO</th>
                 <th style={{ paddingBottom: '10px', fontWeight: 'normal', textAlign: 'center' }}>%</th>
-                <th style={{ paddingBottom: '10px', fontWeight: 'normal', textAlign: 'center' }}>ZYSK</th>
+                <th style={{ paddingBottom: '10px', fontWeight: 'normal', textAlign: 'center' }}>
+                  ZYSK
+                  <span className="text-[9px] text-[#64748b] font-normal block mt-1">(Nominalny)</span>
+                </th>
                 <th style={{ paddingBottom: '10px', fontWeight: 'normal', textAlign: 'right' }}>TARCZA</th>
               </tr>
             </thead>
