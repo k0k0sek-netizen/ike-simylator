@@ -1,4 +1,3 @@
-import { useSimulatorStore, getDerivedWasmParams } from '../../store/useSimulatorStore';
 import { AVAILABLE_INSTRUMENTS } from '../../config/instruments';
 import { AllocationDonut } from '../ui/AllocationDonut';
 
@@ -52,9 +51,6 @@ export function ExportTemplate({ snapshot }: { snapshot: any }) {
   
   // Zdebuguj przepływ danych:
   console.log('EXPORT DATA:', { activeScenario, store });
-
-  // Tłumaczymy dynamiczne portfolio na 3 sztywne wiadła (Core/Sat/Bonds)
-  const adapterParams = useMemo(() => getDerivedWasmParams(store), [store]);
 
   const isAccumulation = store.activePhase === 'accumulation';
   const years = Math.max(1, store.retirementAge - store.currentAge);
@@ -305,7 +301,7 @@ export function ExportTemplate({ snapshot }: { snapshot: any }) {
       </div>
 
       {/* ALOKACJA (Mobile First) */}
-      <div className="flex flex-col lg:flex-row items-center lg:items-start gap-8 mb-8 bg-[#151b2d] p-8 rounded-2xl border border-[#23293c]">
+      <div className="flex flex-col lg:flex-row items-center lg:items-start gap-8 mb-8 bg-surface-container-low p-8 rounded-2xl border border-surface-container-high">
         <div className="flex flex-col items-center w-full lg:w-auto shrink-0">
           <p style={{ marginBottom: '20px', fontSize: '12px', fontWeight: 'bold', color: '#908fa0', alignSelf: 'flex-start' }}>ALOKACJA PORTFELA</p>
           <AllocationDonut 
