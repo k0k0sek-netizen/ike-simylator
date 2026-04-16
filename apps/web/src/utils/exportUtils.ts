@@ -1,6 +1,28 @@
 import { toJpeg } from 'html-to-image';
 
 /**
+ * Asynchroniczne oczekiwanie na pełen render DOM (Polling).
+ * Rozwiązuje problem pustych wykresów w html-to-image wywołanych przez asynchroniczne komponenty (np. Recharts).
+ */
+export async function waitForRender(element: HTMLElement, maxWaitMs = 2000, pollIntervalMs = 50): Promise<void> {
+  return new Promise((resolve) => {
+    let elapsed = 0;
+    const interval = setInterval(() => {
+      // Szukamy elementów, które ładują się najwolniej (np. Canvas/SVG z Recharts)
+      const rechartsSurface = element.querySelector('.recharts-surface');
+      
+      // Jeżeli węzeł graficzny istnieje albo dobiliśmy do Timeoutu, kończymy pętlę.
+      if (rechartsSurface || elapsed >= maxWaitMs) {
+        clearInterval(interval);
+        // Ostatni mikro-delay, żeby przeglądarka fizycznie zdążyła nabrać farby.
+        setTimeout(resolve, 100);
+      }
+      elapsed += pollIntervalMs;
+    }, pollIntervalMs);
+  });
+}
+
+/**
  * exportToIsolatedPNG - Generowanie obrazu PNG (Social Wrapped) z ukrytego szablonu.
  * Silnik html-to-image celuje w #export-template dając czytelny, profesjonalny obraz (obsługa CSS w SVG foreignObject).
  */
@@ -18,9 +40,8 @@ export async function exportToIsolatedPNG(scenario: any) {
   element.style.opacity = '1';
 
   try {
-    // PROBLEM 1: Rozjazd danych (Stale State / Rendering Race Condition)
-    // Czekamy na przerysowanie (repaint) DOM używając najprostszej blokady czasowej.
-    await new Promise(resolve => setTimeout(resolve, 300));
+    // Solidny polling oczekujący na pełne zbudowanie węzłów SVG/Recharts
+    await waitForRender(element);
 
     // PROBLEM 2: Zbyt duży rozmiar pliku (zamiana toPng na toJpeg z zachowaniem pixelRatio)
     const dataUrl = await toJpeg(element, {

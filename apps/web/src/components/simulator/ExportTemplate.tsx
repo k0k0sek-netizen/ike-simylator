@@ -21,8 +21,8 @@ export function ExportTemplate({ snapshot }: { snapshot: any }) {
     return (
       <div 
         id="export-template"
-        className="fixed top-[-9999px] left-[-9999px] opacity-0 pointer-events-none"
-        style={{ width: '1000px', padding: '60px', backgroundColor: '#0c1324' }}
+        className="fixed top-[-9999px] left-[-9999px] pointer-events-none"
+        style={{ width: '1000px', padding: '60px', backgroundColor: '#0c1324', opacity: 1 }}
       />
     );
   }
@@ -87,13 +87,14 @@ export function ExportTemplate({ snapshot }: { snapshot: any }) {
   return (
     <div 
       id="export-template"
-      className="fixed top-[-9999px] left-[-9999px] opacity-0 pointer-events-none"
+      className="fixed top-[-9999px] left-[-9999px] pointer-events-none"
       style={{
         width: '1000px', // Szeroki arkusz A4
         padding: '60px',
         backgroundColor: '#0c1324',
         color: '#dce1fb',
         fontFamily: "'Space Grotesk', sans-serif",
+        opacity: 1, // Ważne: html-to-image omija node'y z opacity: 0
       }}
     >
       {/* NAGŁÓWEK */}

@@ -1,5 +1,6 @@
 import { toJpeg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
+import { waitForRender } from './exportUtils';
 
 /**
  * triggerPrint - Generowanie raportu PDF przy użyciu wzorca Off-screen Template.
@@ -17,10 +18,9 @@ export async function triggerPrint(elementId: string = 'export-template') {
   element.style.opacity = '1';
 
   try {
-    // PROBLEM 1: Rozjazd danych (Stale State / Rendering Race Condition)
-    // Czekamy chwilę po odkryciu elementu, aby React zdążył domontować i przerysować 
-    // widok z aktualnymi danymi ze statu przed przechwyceniem zrzutu ekranu.
-    await new Promise(resolve => setTimeout(resolve, 300));
+    // Używamy ujednoliconej funkcji pollingu, aby upewnić się, 
+    // że komponent (zwłaszcza wykresy) został wyrenderowany.
+    await waitForRender(element);
 
     // PROBLEM 2: Gigantyczny rozmiar pliku PDF (Bloat)
     // Zmieniamy toPng na toJpeg (z kompresją 0.90) aby wyeliminować gigantyczne pliki
