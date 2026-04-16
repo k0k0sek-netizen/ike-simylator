@@ -34,7 +34,7 @@ export function exportSimulationContext(): string {
     const inst = AVAILABLE_INSTRUMENTS.find(i => i.id === item.instrumentId);
     if (!inst) return `- Unknown (${item.instrumentId}): ${item.weight}%`;
     
-    const ikeStatus = item.isIke ? "TAK" : "NIE";
+    const ikeStatus = item.isIke ? "TAK [KONTO IKE - BRAK PODATKU]" : "NIE";
 
     return `- ${item.weight}% ${inst.ticker} (Kategoria: ${inst.category}, Tarcza IKE: ${ikeStatus})`;
   }).join('\n');

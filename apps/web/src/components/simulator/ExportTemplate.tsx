@@ -1,5 +1,16 @@
 import { useSimulatorStore, getDerivedWasmParams } from '../../store/useSimulatorStore';
+import { AVAILABLE_INSTRUMENTS } from '../../config/instruments';
 import { AllocationDonut } from '../ui/AllocationDonut';
+
+function getInstrumentColor(ticker: string) {
+  if (ticker.includes('VWCE')) return '#10b981';
+  if (ticker.includes('SXR8')) return '#3b82f6';
+  if (ticker.includes('SXRV')) return '#ec4899';
+  if (ticker.includes('QDV5')) return '#a855f7';
+  if (ticker.includes('VBTC')) return '#f59e0b';
+  if (ticker.includes('EDO')) return '#818cf8';
+  return '#ffffff';
+}
 import { useMemo } from 'react';
 import { 
   ComposedChart, 
@@ -298,9 +309,14 @@ export function ExportTemplate({ snapshot }: { snapshot: any }) {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <p style={{ marginBottom: '20px', fontSize: '12px', fontWeight: 'bold', color: '#908fa0', alignSelf: 'flex-start' }}>ALOKACJA PORTFELA</p>
           <AllocationDonut 
-            core={adapterParams.coreWeight} 
-            sat={adapterParams.satWeight} 
-            bonds={adapterParams.bondsWeight} 
+            segments={snapshot.store.customPortfolio.map((item: any) => {
+              const inst = AVAILABLE_INSTRUMENTS.find(i => i.id === item.instrumentId);
+              return {
+                value: item.weight,
+                color: getInstrumentColor(inst?.ticker || ''),
+                label: inst?.ticker || item.instrumentId
+              };
+            }).filter((seg: any) => seg.value > 0)}
             size={180}
             strokeWidth={30}
           />
@@ -316,20 +332,24 @@ export function ExportTemplate({ snapshot }: { snapshot: any }) {
               </tr>
             </thead>
             <tbody>
-              {[
-                { label: 'Świat', val: adapterParams.coreWeight, rate: adapterParams.coreRate.toFixed(2), isIke: adapterParams.isCoreIke, color: '#10b981' },
-                { label: 'Krypto', val: adapterParams.satWeight, rate: adapterParams.satRate.toFixed(2), isIke: adapterParams.isSatIke, color: '#f59e0b' },
-                { label: 'Obligacje', val: adapterParams.bondsWeight, rate: adapterParams.bondsRate.toFixed(2), isIke: adapterParams.isBondsIke, color: '#818cf8' },
-              ].map((item, id) => (
-                <tr key={id} style={{ borderBottom: '1px solid #191f31' }}>
-                  <td style={{ padding: '12px 0', fontWeight: 'bold', color: item.color }}>● {item.label}</td>
-                  <td style={{ padding: '12px 0', textAlign: 'center', color: '#ffffff' }}>{item.val}%</td>
-                  <td style={{ padding: '12px 0', textAlign: 'center', color: '#4edea3' }}>{item.rate}%</td>
-                  <td style={{ padding: '12px 0', textAlign: 'right', color: item.isIke ? '#b721ff' : '#908fa0' }}>
-                    {item.isIke ? 'IKE' : 'BELKA'}
-                  </td>
-                </tr>
-              ))}
+              {snapshot.store.customPortfolio.filter((item: any) => item.weight > 0).map((item: any, id: number) => {
+                const inst = AVAILABLE_INSTRUMENTS.find(i => i.id === item.instrumentId);
+                const isIke = item.isIke;
+                const rate = inst ? inst.expectedCagr.toFixed(2) : '0.00';
+                const label = inst ? inst.ticker : item.instrumentId;
+                const color = getInstrumentColor(label);
+                
+                return (
+                  <tr key={id} style={{ borderBottom: '1px solid #191f31' }}>
+                    <td style={{ padding: '12px 0', fontWeight: 'bold', color: color }}>● {label}</td>
+                    <td style={{ padding: '12px 0', textAlign: 'center', color: '#ffffff' }}>{item.weight}%</td>
+                    <td style={{ padding: '12px 0', textAlign: 'center', color: '#4edea3' }}>{rate}%</td>
+                    <td style={{ padding: '12px 0', textAlign: 'right', color: isIke ? '#b721ff' : '#908fa0' }}>
+                      {isIke ? 'IKE' : 'BELKA'}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -4,25 +4,18 @@
  * aby uniknąć błędów parsera html-to-image (brak obsługi oklab w formacie eksportu SVG/obiektów).
  */
 interface AllocationDonutProps {
-  core: number;
-  sat: number;
-  bonds: number;
+  segments: { value: number; color: string; label: string }[];
   size?: number;
   strokeWidth?: number;
 }
 
-export function AllocationDonut({ core, sat, bonds, size = 160, strokeWidth = 24 }: AllocationDonutProps) {
+export function AllocationDonut({ segments, size = 160, strokeWidth = 24 }: AllocationDonutProps) {
   const center = size / 2;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
-  // Kolory HEX zamiast klas Tailwind
-  const total = core + sat + bonds || 1;
-  const segments = [
-    { value: core, color: '#10b981', label: 'Świat' },    // emerald-500
-    { value: sat, color: '#f59e0b', label: 'Krypto' },   // amber-500
-    { value: bonds, color: '#818cf8', label: 'EDO' },     // indigo-400
-  ];
+  // Obliczamy sumę
+  const total = segments.reduce((sum, seg) => sum + seg.value, 0) || 1;
 
   let currentOffset = 0;
 
