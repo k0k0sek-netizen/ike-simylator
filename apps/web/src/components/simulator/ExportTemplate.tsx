@@ -1,3 +1,4 @@
+import { useSimulatorStore, getDerivedWasmParams } from '../../store/useSimulatorStore';
 import { AllocationDonut } from '../ui/AllocationDonut';
 import { useMemo } from 'react';
 import { 
@@ -40,6 +41,9 @@ export function ExportTemplate({ snapshot }: { snapshot: any }) {
   
   // Zdebuguj przepływ danych:
   console.log('EXPORT DATA:', { activeScenario, store });
+
+  // Tłumaczymy dynamiczne portfolio na 3 sztywne wiadła (Core/Sat/Bonds)
+  const adapterParams = useMemo(() => getDerivedWasmParams(store), [store]);
 
   const isAccumulation = store.activePhase === 'accumulation';
   const years = Math.max(1, store.retirementAge - store.currentAge);
@@ -294,9 +298,9 @@ export function ExportTemplate({ snapshot }: { snapshot: any }) {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <p style={{ marginBottom: '20px', fontSize: '12px', fontWeight: 'bold', color: '#908fa0', alignSelf: 'flex-start' }}>ALOKACJA PORTFELA</p>
           <AllocationDonut 
-            core={store.customCoreWeight} 
-            sat={store.customSatWeight} 
-            bonds={store.customBondsWeight} 
+            core={adapterParams.coreWeight} 
+            sat={adapterParams.satWeight} 
+            bonds={adapterParams.bondsWeight} 
             size={180}
             strokeWidth={30}
           />
@@ -313,9 +317,9 @@ export function ExportTemplate({ snapshot }: { snapshot: any }) {
             </thead>
             <tbody>
               {[
-                { label: 'Świat', val: store.customCoreWeight, rate: store.coreRate, isIke: store.isCoreIke, color: '#10b981' },
-                { label: 'Krypto', val: store.customSatWeight, rate: store.satRate, isIke: store.isSatIke, color: '#f59e0b' },
-                { label: 'Obligacje', val: store.customBondsWeight, rate: store.bondsRate, isIke: store.isBondsIke, color: '#818cf8' },
+                { label: 'Świat', val: adapterParams.coreWeight, rate: adapterParams.coreRate.toFixed(2), isIke: adapterParams.isCoreIke, color: '#10b981' },
+                { label: 'Krypto', val: adapterParams.satWeight, rate: adapterParams.satRate.toFixed(2), isIke: adapterParams.isSatIke, color: '#f59e0b' },
+                { label: 'Obligacje', val: adapterParams.bondsWeight, rate: adapterParams.bondsRate.toFixed(2), isIke: adapterParams.isBondsIke, color: '#818cf8' },
               ].map((item, id) => (
                 <tr key={id} style={{ borderBottom: '1px solid #191f31' }}>
                   <td style={{ padding: '12px 0', fontWeight: 'bold', color: item.color }}>● {item.label}</td>
