@@ -21,8 +21,17 @@ export function ExportTemplate({ snapshot }: { snapshot: any }) {
     return (
       <div 
         id="export-template"
-        className="fixed top-[-9999px] left-[-9999px] pointer-events-none"
-        style={{ width: '1000px', padding: '60px', backgroundColor: '#0c1324', opacity: 1 }}
+        className="pointer-events-none"
+        style={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          zIndex: -9999, 
+          width: '100%', 
+          padding: '60px', 
+          backgroundColor: '#0c1324', 
+          opacity: 1 
+        }}
       />
     );
   }
@@ -87,9 +96,13 @@ export function ExportTemplate({ snapshot }: { snapshot: any }) {
   return (
     <div 
       id="export-template"
-      className="fixed top-[-9999px] left-[-9999px] pointer-events-none"
+      className="pointer-events-none"
       style={{
-        width: '1000px', // Szeroki arkusz A4
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        zIndex: -9999,
+        width: '100%',
         padding: '60px',
         backgroundColor: '#0c1324',
         color: '#dce1fb',
